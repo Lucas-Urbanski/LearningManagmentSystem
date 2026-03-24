@@ -25,7 +25,7 @@ export default function Home() {
             type="text"
             placeholder="Search for courses..."
             className="w-full rounded-full border border-zinc-800 bg-transparent px-10 py-1.5 focus:outline-none placeholder:text-zinc-600 text-zinc-800"
-            style={{ backgroundImage: 'url("data:image/svg+xml,...")' }} // You can add a magnifying glass icon here
+            style={{ backgroundImage: 'url("data:image/svg+xml,...")' }}
           />
         </div>
 

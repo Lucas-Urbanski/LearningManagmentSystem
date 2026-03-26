@@ -1,4 +1,3 @@
-<<<<<<< alessandro
 import Link from "next/link";
 import { BookOpen, CalendarDays, Users, UserCircle } from "lucide-react";
 
@@ -82,14 +81,3 @@ export default function CoursePage() {
     </main>
   );
 }
-=======
-
-export default function Courses() {
-
-  return (
-    <div className="min-h-screen font-sans bg-[#F5F1E6]">
-      
-    </div>
-  );
-}
->>>>>>> master

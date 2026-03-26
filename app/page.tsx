@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Settings, BookOpen } from "lucide-react";
 import CourseCard from "./components/courseCard";
-import SignInPage from "./login/page";
+import SignInPage from "./signin/page";
 
 export default function Home() {
   const isTeacher: boolean = true;
@@ -12,7 +12,7 @@ export default function Home() {
       <header className="bg-[#D9D2C3] border-b border-black/10 px-8 py-4 flex items-center justify-between">
         {/* Logo & Home Link */}
         <Link
-          href="/login"
+          href="/signin"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
           <div className="w-8 h-8 bg-zinc-800 rounded flex items-center justify-center text-[#F5F1E6]">
@@ -33,8 +33,8 @@ export default function Home() {
 
         {/* Courses & Settings */}
         <div className="flex items-center gap-6 text-zinc-800 font-medium">
-          <Link href="/courses" className="text-lg font-bold hover:opacity-80">
-            Courses
+          <Link href="/course" className="text-lg font-bold hover:opacity-80">
+            Course
           </Link>
           <Link href="/settings" aria-label="Settings">
             <Settings

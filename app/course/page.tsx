@@ -1,7 +1,27 @@
-import Link from "next/link";
-import { BookOpen, CalendarDays, Users, UserCircle } from "lucide-react";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { BookOpen, CalendarDays, Users, UserCircle, LogOut } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import AuthGuard from "../components/AuthGuard";
 
 export default function CoursePage() {
+  return (
+    <AuthGuard>
+      <CourseContent />
+    </AuthGuard>
+  );
+}
+
+function CourseContent() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/signin");
+  };
+
   const course = {
     name: "Introduction to Web Development",
     teacher: "Prof. Sarah Johnson",
@@ -16,17 +36,17 @@ export default function CoursePage() {
         <div className="flex items-center justify-between rounded-3xl border border-zinc-300 bg-white p-6 shadow-lg">
           <div>
             <p className="text-sm font-medium text-zinc-500">CourseCanvas</p>
-            <h1 className="mt-2 text-3xl font-bold text-zinc-800">
-              Course Page
-            </h1>
+            <h1 className="mt-2 text-3xl font-bold text-zinc-800">Course Page</h1>
+            <p className="mt-1 text-sm text-zinc-600">
+              Signed in as {user?.name} ({user?.role})
+            </p>
           </div>
 
-          <Link
-            href="/signin"
-            className="rounded-xl bg-zinc-800 px-4 py-2 font-medium text-[#F5F1E6] transition hover:opacity-90"
-          >
-            Sign Out
-          </Link>
+          <button
+            onClick={() => router.push("/home")}
+            className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 font-medium text-[#F5F1E6] transition hover:opacity-90">
+            ← Back to Home
+          </button>
         </div>
 
         <section className="rounded-3xl border border-zinc-300 bg-white p-8 shadow-lg">
@@ -60,23 +80,32 @@ export default function CoursePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-zinc-300 bg-white p-8 shadow-lg">
-          <div className="mb-6 flex items-center gap-2 text-zinc-700">
-            <Users size={20} />
-            <h2 className="text-xl font-bold text-zinc-800">Enrolled Students</h2>
-          </div>
+        {user?.role === "instructor" ? (
+          <section className="rounded-3xl border border-zinc-300 bg-white p-8 shadow-lg">
+            <div className="mb-6 flex items-center gap-2 text-zinc-700">
+              <Users size={20} />
+              <h2 className="text-xl font-bold text-zinc-800">Enrolled Students</h2>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {course.students.map((student, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800"
-              >
-                {student}
-              </div>
-            ))}
-          </div>
-        </section>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {course.students.map((student, index) => (
+                <div
+                  key={index}
+                  className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800"
+                >
+                  {student}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-3xl border border-zinc-300 bg-white p-8 shadow-lg">
+            <h2 className="text-xl font-bold text-zinc-800">Student View</h2>
+            <p className="mt-3 text-zinc-600">
+              You are signed in as a student. Instructor-only controls are hidden.
+            </p>
+          </section>
+        )}
       </div>
     </main>
   );

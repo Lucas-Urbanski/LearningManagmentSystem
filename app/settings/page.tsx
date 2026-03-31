@@ -44,7 +44,8 @@ export default function Settings() {
           setBio(profile.bio || "");
           setAvatarUrl(profile.avatarUrl || "");
         }
-      } else {
+      } 
+      else {
         router.push("/signin");
       }
       setLoading(false);

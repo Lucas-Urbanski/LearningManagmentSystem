@@ -56,7 +56,7 @@ export default function QuizCreation() {
           <span className="font-bold text-zinc-800 text-lg">CourseCanvas</span>
         </Link>
 
-        <div className="flex-1 max-w-md mr-15.5 px-4 text-center">
+        <div className="flex-1 max-w-md mr-16 px-4 text-center">
           <h1 className="font-bold text-zinc-800 text-lg">Quiz Creation</h1>
         </div>
 
@@ -73,9 +73,9 @@ export default function QuizCreation() {
           </Link>
         </div>
       </header>
-      <main className="flex flex-col bg-[#D9D2C3] min-h-screen w-1/3 m-10 rounded-sm mx-auto items-center">
-        <div className="flex flex-row bg-[#F5F1E6] rounded-sm p-5 m-5">
-            <h1 className="pr-6">Enter Number of Questions in quiz</h1>
+      <main className="flex flex-col bg-[#D9D2C3] min-h-screen w-1/3 m-10 rounded-sm mx-auto items-center text-zinc-500">
+        <div className="flex flex-col bg-[#F5F1E6] rounded-sm p-5 m-5 gap-2">
+            <h1 className="pr-6">Enter Number of Questions in The Quiz</h1>
             <input type="number" value={numberOfQuestions} className="text-right border pl-6"
             onChange={(e) => setNumberOfQuestions(Number(e.target.value))}/>
         </div>

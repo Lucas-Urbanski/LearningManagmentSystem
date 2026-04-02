@@ -45,32 +45,36 @@ export default function QuizCreation() {
   
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F1E6]">
-      <header className="bg-[#D9D2C3] border-b border-black/10 px-8 py-4 flex items-center justify-between">
-        <Link
-          href="/home"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <div className="w-8 h-8 bg-zinc-800 rounded flex items-center justify-center text-[#F5F1E6]">
-            <BookOpen size={18} />
-          </div>
-          <span className="font-bold text-zinc-800 text-lg">CourseCanvas</span>
-        </Link>
+<header className="sticky top-0 z-10 border-b border-zinc-300 bg-white/80 backdrop-blur-md px-8 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <Link
+            href="/home"
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-[#F5F1E6]">
+              <BookOpen size={22} />
+            </div>
+            <span className="hidden text-xl font-bold text-zinc-800 sm:block">
+              CourseCanvas
+            </span>
+          </Link>
 
-        <div className="flex-1 max-w-md mr-16 px-4 text-center">
+        <div className="flex-1 max-w-md mr-15.5 px-4 text-center">
           <h1 className="font-bold text-zinc-800 text-lg">Quiz Creation</h1>
         </div>
 
-        <div className="flex items-center text-zinc-800 font-medium">
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 group hover:opacity-80 transition-all"
-          >
-            <h1 className="text-lg font-bold">Settings</h1>
-            <Settings
-              size={22}
-              className="group-hover:rotate-45 transition-transform duration-300"
-            />
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              href="/settings"
+              className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
+            >
+              Settings
+              <Settings
+                size={20}
+                className="transition-transform hover:rotate-45"
+              />
+            </Link>
+          </div>
         </div>
       </header>
       <main className="flex flex-col bg-[#D9D2C3] min-h-screen w-1/3 m-10 rounded-sm mx-auto items-center text-zinc-500">

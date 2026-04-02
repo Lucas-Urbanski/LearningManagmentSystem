@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, CalendarDays, Users, UserCircle } from "lucide-react";
+import {
+  BookOpen,
+  PlusCircle,
+  ArrowLeft,
+  CalendarDays,
+  Users,
+  UserCircle,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthGuard from "../components/AuthGuard";
 
@@ -45,17 +52,19 @@ function CourseContent() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push("/home")}
-              className="rounded-xl bg-zinc-800 px-4 py-2 font-medium text-[#F5F1E6] transition hover:opacity-90"
+              className="flex flex-row items-center gap-1 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-[#F5F1E6] transition hover:opacity-90"
             >
-              ← Back to Home
+              <ArrowLeft size={18} />
+              Back to Home
             </button>
 
             {isTeacher && (
               <Link
-                href="/quizCreation"
-                className="rounded-xl bg-zinc-800 px-4 py-2 font-medium text-[#F5F1E6] transition hover:opacity-90"
+                href="/courseCreation"
+                className="flex items-center gap-2 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-[#F5F1E6] transition hover:opacity-90"
               >
-                Create Quiz
+                <PlusCircle size={18} />
+                Create Course
               </Link>
             )}
           </div>

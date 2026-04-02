@@ -3,23 +3,6 @@
 -- drop table if exists public.profiles;
 -- drop table if exists public.courses;
 
-create function if not exists public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, fullName, role)
-  values (
-    new.id, 
-    new.raw_user_meta_data->>'fullName', 
-    new.raw_user_meta_data->>'role'
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger if not exists on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
 create table if not exists public.profiles (
   id uuid references auth.users not null primary key,
   fullName text,
@@ -36,6 +19,23 @@ create policy if not exists "Profiles are viewable by everyone"
 
 create policy if not exists "Users can update their own profile" 
   on profiles for update using (auth.uid() = id);
+
+create function if not exists public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, fullName, role)
+  values (
+    new.id, 
+    new.raw_user_meta_data->>'fullName', 
+    new.raw_user_meta_data->>'role'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger if not exists on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 
 create table if not exists public.courses (
   id uuid primary key default gen_random_uuid(),

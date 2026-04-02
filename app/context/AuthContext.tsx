@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
 
 type UserRole = "student" | "instructor";
 
@@ -21,7 +21,16 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = useMemo(() => createClient(), []);
+  // Using the SSR-friendly browser client
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      ),
+    [],
+  );
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,57 +38,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     const loadUser = async () => {
-      setLoading(true);
+      try {
+        const {
+          data: { user: authUser },
+          error,
+        } = await supabase.auth.getUser();
 
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+        if (!mounted) return;
 
-      if (!mounted) return;
-
-      if (error || !user) {
-        setUser(null);
-        setLoading(false);
-        return;
+        if (error || !authUser) {
+          setUser(null);
+        } else {
+          setUser({
+            id: authUser.id,
+            email: authUser.email ?? "",
+            name:
+              (authUser.user_metadata?.fullName as string) ||
+              (authUser.email?.split("@")[0] ?? "User"),
+            role: (authUser.user_metadata?.role as UserRole) || "student",
+          });
+        }
+      } catch (err) {
+        console.error("Auth context error:", err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      setUser({
-        id: user.id,
-        email: user.email ?? "",
-        name:
-          (user.user_metadata?.full_name as string) ||
-          (user.email?.split("@")[0] ?? "User"),
-        role: (user.user_metadata?.role as UserRole) || "student",
-      });
-
-      setLoading(false);
     };
 
     loadUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
 
       if (!session?.user) {
         setUser(null);
-        setLoading(false);
-        return;
+      } else {
+        const sUser = session.user;
+        setUser({
+          id: sUser.id,
+          email: sUser.email ?? "",
+          name:
+            (sUser.user_metadata?.fullName as string) ||
+            (sUser.email?.split("@")[0] ?? "User"),
+          role: (sUser.user_metadata?.role as UserRole) || "student",
+        });
       }
-
-      const sessionUser = session.user;
-
-      setUser({
-        id: sessionUser.id,
-        email: sessionUser.email ?? "",
-        name:
-          (sessionUser.user_metadata?.full_name as string) ||
-          (sessionUser.email?.split("@")[0] ?? "User"),
-        role: (sessionUser.user_metadata?.role as UserRole) || "student",
-      });
-
       setLoading(false);
     });
 
@@ -103,10 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
   return context;
 }

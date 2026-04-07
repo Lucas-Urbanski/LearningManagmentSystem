@@ -17,8 +17,11 @@ type Question = {
 };
 
 export default function QuizCreation() {
-  const [questions, setQuestions] = useState<Question[]>([{ id: 1 }]);
+  const today = new Date();
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState(today.toLocaleDateString());
+  const [questions, setQuestions] = useState<Question[]>([{ id: 1 }]);
 
   const numberOfQuestions = questions.length;
 
@@ -114,6 +117,13 @@ export default function QuizCreation() {
         <section className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="grid gap-8 md:grid-cols-2">
             <div className="space-y-2">
+              <input
+              type="text"
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              >
+              </input>
               <label className="ml-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
                 <HelpCircle size={14} /> Total Questions
               </label>
@@ -131,6 +141,8 @@ export default function QuizCreation() {
               </label>
               <input
                 type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
                 className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-3 outline-none transition-all focus:border-zinc-800 focus:bg-white"
               />
             </div>

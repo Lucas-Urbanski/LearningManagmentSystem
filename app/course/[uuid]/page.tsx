@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import {
   BookOpen,
   Settings,
@@ -13,29 +14,28 @@ import {
   GraduationCap,
   FileText,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import AuthGuard from "../components/AuthGuard";
-import { createClient } from "@/lib/supabase";
-import { useRef, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { useAuth } from "../../context/AuthContext";
+import AuthGuard from "../../components/AuthGuard";
 
-type LessonFile = {
-  id: number;
-  title: string;
-  dueDate: string;
-  status: string;
-  fileUrl?: string;
-  fileName?: string;
-};
-
-export default function CoursePage() {
+export default function CoursePage({ params }: { params: { uuid: string } }) {
   return (
     <AuthGuard>
-      <CourseContent />
+      <CourseContent params={params} />
     </AuthGuard>
   );
 }
 
-function CourseContent() {
+function CourseContent({ params }: { params: { uuid: string } }) {
+  
+      const supabase = useMemo(
+        () =>
+          createBrowserClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          ),
+        [],
+      );
   const { user } = useAuth();
   const isTeacher = user?.role === "instructor";
   const supabase = createClient();
@@ -69,6 +69,27 @@ function CourseContent() {
       fileName: "",
     },
   ]);
+
+  const callCourse = async () => {
+    const { uuid } = params;
+    const { error: courseError } = await supabase
+    .from("courses")
+    .select("title, description, startDate, endDate")
+    .eq("id", uuid)
+    .single();
+
+    if (courseError) {
+      console.error("Error fetching course:", courseError);
+    }
+  }
+
+  const callQuiz = async () => {
+    const { error: quizError } = await supabase
+    .from("quizzes")
+    .select("title, dueDate")
+    .eq("id", 1)
+    .single();
+  };
 
   const course = {
     name: "Introduction to Web Development",

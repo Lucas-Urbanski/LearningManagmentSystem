@@ -77,6 +77,18 @@ ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Courses are viewable by everyone"
   ON public.courses FOR SELECT USING (TRUE);
 
+CREATE POLICY "Instructors can create their own courses"
+ON public.courses
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() 
+    AND role = 'instructor'
+  )
+);
+
 CREATE POLICY "Instructors can manage their own courses"
   ON public.courses FOR ALL USING (auth.uid() = "instructorId");
 
@@ -85,6 +97,7 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
+  "dueDate" DATE,
   questions JSONB NOT NULL,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -105,8 +118,7 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
     )
   );
 
--- LESSON UPLOADS TABLE
-CREATE TABLE IF NOT EXISTS public.lesson_uploads (
+CREATE TABLE IF NOT EXISTS public.lesson (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   "courseID" TEXT NOT NULL,
   title TEXT NOT NULL,
@@ -117,144 +129,19 @@ CREATE TABLE IF NOT EXISTS public.lesson_uploads (
   "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE public.lesson_uploads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lesson ENABLE ROW LEVEL SECURITY;
 
--- RLS POLICIES FOR LESSON UPLOADS
-CREATE POLICY "Lesson uploads are viewable by everyone"
-  ON public.lesson_uploads FOR SELECT USING (TRUE);
-
-CREATE POLICY "Authenticated users can insert their own lesson uploads"
-  ON public.lesson_uploads FOR INSERT
-  WITH CHECK (auth.uid() = "uploadedBy");
-
-CREATE POLICY "Users can update their own lesson uploads"
-  ON public.lesson_uploads FOR UPDATE
-  USING (auth.uid() = "uploadedBy");
-
-CREATE POLICY "Users can delete their own lesson uploads"
-  ON public.lesson_uploads FOR DELETE
-  USING (auth.uid() = "uploadedBy");
-
--- STORAGE POLICIES FOR lesson-files BUCKET
-CREATE POLICY "Authenticated users can upload lesson files"
-  ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'lesson-files');
-
-CREATE POLICY "Lesson files are viewable by everyone"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'lesson-files');
-
-CREATE POLICY "Users can update their own lesson files"
-  ON storage.objects FOR UPDATE TO authenticated
-  USING (bucket_id = 'lesson-files' AND owner = auth.uid())
-  WITH CHECK (bucket_id = 'lesson-files' AND owner = auth.uid());
-
-CREATE POLICY "Users can delete their own lesson files"
-  ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id = 'lesson-files' AND owner = auth.uid());
-
-  -- CLEAN UP LESSON UPLOAD POLICIES
-DROP POLICY IF EXISTS "Lesson uploads are viewable by everyone" ON public.lesson_uploads;
-DROP POLICY IF EXISTS "Authenticated users can insert their own lesson uploads" ON public.lesson_uploads;
-DROP POLICY IF EXISTS "Users can update their own lesson uploads" ON public.lesson_uploads;
-DROP POLICY IF EXISTS "Users can delete their own lesson uploads" ON public.lesson_uploads;
-
-DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
-DROP POLICY IF EXISTS "Lesson files are viewable by everyone" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update their own lesson files" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete their own lesson files" ON storage.objects;
-
--- DROP THE TABLE SO WE DON'T KEEP THE OLD VERSION
-DROP TABLE IF EXISTS public.lesson_uploads;
-
--- RECREATE TABLE IN THE SAME STYLE AS YOUR OTHER TABLES
-CREATE TABLE public.lesson_uploads (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  "courseName" TEXT NOT NULL,
-  title TEXT NOT NULL,
-  "fileName" TEXT NOT NULL,
-  "filePath" TEXT NOT NULL,
-  "fileUrl" TEXT,
-  "uploadedBy" UUID REFERENCES public.profiles(id) NOT NULL,
-  "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- RLS POLICIES FOR LESSON
+CREATE POLICY "Instructors can create their own lesson uploads"
+ON public.lesson
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() = "uploadedBy"
+  AND EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'instructor'
+  )
 );
-
-ALTER TABLE public.lesson_uploads ENABLE ROW LEVEL SECURITY;
-
--- RLS FOR lesson_uploads
-CREATE POLICY "Lesson uploads are viewable by everyone"
-  ON public.lesson_uploads FOR SELECT
-  USING (TRUE);
-
-CREATE POLICY "Authenticated users can insert their own lesson uploads"
-  ON public.lesson_uploads FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = "uploadedBy");
-
-CREATE POLICY "Users can update their own lesson uploads"
-  ON public.lesson_uploads FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = "uploadedBy");
-
-CREATE POLICY "Users can delete their own lesson uploads"
-  ON public.lesson_uploads FOR DELETE
-  TO authenticated
-  USING (auth.uid() = "uploadedBy");
-
--- STORAGE RLS FOR lesson-files BUCKET
-CREATE POLICY "Authenticated users can upload lesson files"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (bucket_id = 'lesson-files');
-
-CREATE POLICY "Lesson files are viewable by everyone"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'lesson-files');
-
-CREATE POLICY "Users can update their own lesson files"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (bucket_id = 'lesson-files' AND owner_id = auth.uid())
-  WITH CHECK (bucket_id = 'lesson-files' AND owner_id = auth.uid());
-
-CREATE POLICY "Users can delete their own lesson files"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (bucket_id = 'lesson-files' AND owner_id = auth.uid());
-
-DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
-
-CREATE POLICY "Authenticated users can upload lesson files"
-  ON storage.objects
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (bucket_id = 'lesson-files');
-
--- STORAGE POLICY CLEANUP
-DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
-DROP POLICY IF EXISTS "Lesson files are viewable by everyone" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update their own lesson files" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete their own lesson files" ON storage.objects;
-
--- SIMPLE STORAGE POLICIES FOR lesson-files
-CREATE POLICY "Authenticated users can upload lesson files"
-  ON storage.objects
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (bucket_id = 'lesson-files');
-
-CREATE POLICY "Lesson files are viewable by everyone"
-  ON storage.objects
-  FOR SELECT
-  USING (bucket_id = 'lesson-files');
-
-DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
-
-CREATE POLICY "Temporary public upload test for lesson-files"
-  ON storage.objects
-  FOR INSERT
-  TO public
-  WITH CHECK (bucket_id = 'lesson-files');
-
-
-

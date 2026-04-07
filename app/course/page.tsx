@@ -33,6 +33,27 @@ function CourseContent() {
     startDate: "May 6, 2026",
     endDate: "August 20, 2026",
     students: ["Alex Brown", "Jamie Lee", "Taylor Smith", "Jordan White"],
+    lessons: [
+      {
+        id: 1,
+        title: "HTML Basics Quiz",
+        dueDate: "May 19, 2026",
+        status: "Open",
+      },
+      {
+        id: 2,
+        title: "CSS Fundamentals Quiz",
+        dueDate: "June 3, 2026",
+        status: "Locked",
+      },
+      {
+        id: 3,
+        title: "JavaScript Intro Quiz",
+        dueDate: "June 17, 2026",
+        status: "Locked",
+      },
+    ],
+
     quizzes: [
       {
         id: 1,
@@ -172,6 +193,62 @@ function CourseContent() {
               interaction."
             </div>
           )}
+        </div>
+
+          {/* Upload Lessons */}
+        <div className="grid gap-4 ">
+          <div className="flex items-center justify-between px-2  mt-8">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <FileQuestion size={24} /> Lessons
+            </h2>
+            {isTeacher && (
+              <Link
+                href=""
+                className="group flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black">
+                <Plus size={16} /> Upload Lessons
+              </Link>
+            )}
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
+            {course.lessons.map((quiz) => {
+              const content = (
+                <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`h-12 w-12 rounded-2xl flex items-center justify-center ${quiz.status === "Open" ? "bg-zinc-100 text-zinc-800" : "bg-zinc-50 text-zinc-300"}`}
+                    >
+                      <FileQuestion
+                        size={20}
+                        className={`${quiz.status === "open" ? "text-green-700" : null}`}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg group-hover:text-black">
+                        {quiz.title}
+                      </h3>
+                      <p className="text-sm text-zinc-500">
+                        Due {quiz.dueDate}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={20}
+                    className="text-zinc-300 group-hover:text-zinc-800 transition-colors"
+                  />
+                </div>
+              );
+
+              return quiz.status === "Open" ? (
+                <Link key={quiz.id} href="/quiz" className="block group">
+                  {content}
+                </Link>
+              ) : (
+                <div key={quiz.id} className="block group">
+                  {content}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Quiz List */}

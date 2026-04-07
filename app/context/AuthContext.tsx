@@ -11,7 +11,7 @@ import {
 import { createBrowserClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 
-type UserRole = "student" | "instructor" | "admin";
+type UserRole = "student" | "instructor";
 
 interface AuthUser {
   id: string;

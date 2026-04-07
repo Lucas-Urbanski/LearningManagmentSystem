@@ -1,121 +1,153 @@
 "use client";
-import { Settings, BookOpen } from "lucide-react";
+
+import {
+  Settings,
+  BookOpen,
+  Plus,
+  HelpCircle,
+  Calendar,
+  CheckCircle2,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function QuizCreation() {
-  const [numberOfQuestions, setNumberOfQuestions] = useState(0);
-  const [answerArray, setAnswerArray] = useState([""]);
-  const quizList = [];
+  const [numberOfQuestions, setNumberOfQuestions] = useState(1);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
 
-  function updateArray(index: number, answer: string) {
-    const tempArray = [...answerArray];
-    tempArray[index - 1] = answer;
-    setAnswerArray(tempArray);
-  }
+  const handleUpdateAnswer = (index: number, choice: string) => {
+    setAnswers((prev) => ({ ...prev, [index]: choice }));
+  };
 
-  if (numberOfQuestions != 0) {
-    if (numberOfQuestions < 0) {
-      setNumberOfQuestions(0);
-    }
-    for (let i = 1; i <= numberOfQuestions; i++) {
-      quizList.push(
-        <li key={i} className="bg-[#F5F1E6] h-1/2 rounded-xl p-5 m-5">
-          <input type="text" placeholder="Enter Question" />
-          <div className="pt-5 flex flex-col">
-            <div className="flex flex-row pb-3">
-              <input
-                type="text"
-                placeholder="Enter Answer A"
-                className="w-1/2"
-              />
-              <input
-                type="text"
-                placeholder="Enter Answer B"
-                className="w-1/2"
-              />
-            </div>
-            <div className="flex flex-row">
-              <input
-                type="text"
-                placeholder="Enter Answer C"
-                className="w-1/2"
-              />
-              <input
-                type="text"
-                placeholder="Enter Answer D"
-                className="w-1/2"
-              />
-            </div>
-          </div>
-          <h1 className="mt-3">Select the right answer</h1>
-          <div className="flex justify-around mt-1">
-            <button onClick={() => updateArray(i, "A")}>A</button>
-            <button onClick={() => updateArray(i, "B")}>B</button>
-            <button onClick={() => updateArray(i, "C")}>C</button>
-            <button onClick={() => updateArray(i, "D")}>D</button>
-          </div>
-        </li>,
-      );
-    }
-  }
+  const handleQuantityChange = (val: number) => {
+    if (val < 0) setNumberOfQuestions(0);
+    else if (val > 50) setNumberOfQuestions(50);
+    else setNumberOfQuestions(val);
+  };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F5F1E6]">
-      <header className="sticky top-0 z-10 border-b border-zinc-300 bg-white/80 backdrop-blur-md px-8 py-4">
+    <div className="flex flex-col min-h-screen bg-[#F5F1E6] text-zinc-800">
+      {/* Header */}
+      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/70 backdrop-blur-md px-8 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
             href="/home"
             className="flex items-center gap-2 transition-opacity hover:opacity-80"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-[#F5F1E6]">
-              <BookOpen size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-[#F5F1E6]">
+              <BookOpen size={20} />
             </div>
-            <span className="hidden text-xl font-bold text-zinc-800 sm:block">
+            <span className="hidden text-lg font-bold tracking-tight sm:block">
               CourseCanvas
             </span>
           </Link>
 
-          <div className="flex-1 max-w-md px-4 text-center sm:mr-15.5">
-            <h1 className="font-bold text-zinc-800 text-lg">Quiz Creation</h1>
-          </div>
+          <h1 className="font-bold text-sm uppercase tracking-widest text-zinc-500 ml-4 sm:mr-16">
+            Quiz Builder
+          </h1>
 
-          <div className="flex items-center gap-5">
-            <Link
-              href="/settings"
-              className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
-            >
-              Settings
-              <Settings
-                size={20}
-                className="transition-transform hover:rotate-45"
-              />
-            </Link>
-          </div>
+          <Link
+            href="/settings"
+            className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
+          >
+            Settings
+            <Settings
+              size={20}
+              className="transition-transform hover:rotate-45"
+            />
+          </Link>
         </div>
       </header>
-      <main className="flex flex-col min-h-screen m-10 mx-auto sm:min-w-xl md:min-w-2xl lg:min-w-3xl xl:min-w-4xl items-center text-zinc-800 rounded-3xl border border-zinc-300 bg-white/50 p-8 shadow-sm">
-        <div className="flex flex-col bg-[#F5F1E6] rounded-xl shadow-sm p-5 m-5 gap-2">
-          <h1 className="pr-6">Enter Number of Questions in The Quiz</h1>
-          <input
-            type="number"
-            value={numberOfQuestions}
-            className="text-right border pl-6"
-            onChange={(e) => setNumberOfQuestions(Number(e.target.value))}
-          />
+
+      <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-8">
+        {/* Information Card */}
+        <section className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                <HelpCircle size={14} /> Total Questions
+              </label>
+              <input
+                type="number"
+                value={numberOfQuestions}
+                onChange={(e) => handleQuantityChange(Number(e.target.value))}
+                className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-3 font-bold text-lg outline-none transition-all focus:border-zinc-800 focus:bg-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                <Calendar size={14} /> Due Date
+              </label>
+              <input
+                type="date"
+                className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-3 outline-none transition-all focus:border-zinc-800 focus:bg-white"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Question List */}
+        <div className="space-y-6">
+          {Array.from({ length: numberOfQuestions }).map((_, i) => (
+            <div
+              key={i}
+              className="group relative rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm transition-all hover:border-zinc-300"
+            >
+              <div className="mb-6 flex items-center justify-between border-b border-zinc-50 pb-4">
+                <span className="text-xs font-black uppercase tracking-tighter text-zinc-500">
+                  Question {i + 1}
+                </span>
+                <button className="text-zinc-300 hover:text-red-500 transition-colors">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <input
+                type="text"
+                placeholder="What is the question prompt?"
+                className="mb-6 w-full rounded-xl border border-zinc-100 bg-zinc-50 px-5 py-3 bg-transparent text-xl font-bold placeholder:text-zinc-300 outline-none"
+              />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["A", "B", "C", "D"].map((letter) => (
+                  <div key={letter} className="relative group/input">
+                    <input
+                      type="text"
+                      placeholder={`Option ${letter}`}
+                      className="w-full rounded-xl border border-zinc-100 bg-zinc-50 py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-zinc-800 focus:bg-white"
+                    />
+                    <button
+                      onClick={() => handleUpdateAnswer(i, letter)}
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-black transition-all ${
+                        answers[i] === letter
+                          ? "bg-zinc-800 text-white shadow-lg"
+                          : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
+                      }`}
+                    >
+                      {letter}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {answers[i] && (
+                <div className="mt-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 animate-in fade-in slide-in-from-top-1">
+                  <CheckCircle2 size={14} /> Correct Answer Set to {answers[i]}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-        <ul className="w-9/10">{quizList}</ul>
-        <div className="flex flex-row bg-[#F5F1E6] rounded-full shadow-sm p-5 pt-5 m-2 gap-5">
-          <h1>Enter course Start date</h1>
-          <input type="date" className="text-right border pl-6" />
+
+        {/* Publish Button */}
+        <div className="flex justify-center">
+          <button className="flex items-center gap-3 rounded-2xl bg-zinc-900 px-8 py-4 font-bold text-[#F5F1E6] shadow-2xl transition-all hover:bg-black hover:scale-[1.02] active:scale-95">
+            <Plus size={20} />
+            Publish Quiz
+          </button>
         </div>
-        <div className="flex flex-row bg-[#F5F1E6] rounded-full shadow-sm p-5 pt-5 m-2 gap-5">
-          <h1>Enter course End date</h1>
-          <input type="date" className="text-right border pl-6" />
-        </div>
-        <button className="flex w-1/3 sm:w-1/4 md:w-1/5 lg:w-1/6 items-center justify-center rounded-xl bg-zinc-800 px-4 py-3 m-2 font-semibold text-[#F5F1E6] hover:opacity-90 transition">
-          Submit
-        </button>
       </main>
     </div>
   );

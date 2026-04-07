@@ -87,7 +87,7 @@ function HomeContent() {
             </span>
           </Link>
 
-          <div className="relative mx-4 flex-1 max-w-md">
+          <div className="relative mx-4 sm:mr-14 flex-1 max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
               size={18}

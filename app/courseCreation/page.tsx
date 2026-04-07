@@ -1,71 +1,120 @@
-import { Settings, BookOpen, PlusCircle } from "lucide-react";
+"use client";
+
+import {
+  Settings,
+  BookOpen,
+  PlusCircle,
+  Calendar,
+  FileText,
+  Type,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function CourseCreation() {
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-[#F5F1E6]">
-      <header className="sticky top-0 z-10 border-b border-zinc-300 bg-white/80 backdrop-blur-md px-8 py-4">
+    <div className="flex flex-col min-h-screen font-sans bg-[#F5F1E6] text-zinc-800">
+      {/* Header */}
+      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/70 backdrop-blur-md px-8 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
             href="/home"
             className="flex items-center gap-2 transition-opacity hover:opacity-80"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-[#F5F1E6]">
-              <BookOpen size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-[#F5F1E6]">
+              <BookOpen size={20} />
             </div>
-            <span className="hidden text-xl font-bold text-zinc-800 sm:block">
+            <span className="hidden text-lg font-bold tracking-tight sm:block">
               CourseCanvas
             </span>
           </Link>
 
-          <div className="flex-1 max-w-md px-4 text-center sm:mr-15.5">
-            <h1 className="font-bold text-zinc-800 text-lg">Course Creation</h1>
-          </div>
+          <h1 className="font-bold text-sm uppercase tracking-widest text-zinc-500 ml-4 sm:mr-16">
+            New Course
+          </h1>
 
-          <div className="flex items-center gap-5">
-            <Link
-              href="/settings"
-              className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
-            >
-              Settings
-              <Settings
-                size={20}
-                className="transition-transform hover:rotate-45"
-              />
-            </Link>
-          </div>
+          <Link
+            href="/settings"
+            className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
+          >
+            Settings
+            <Settings
+              size={20}
+              className="transition-transform hover:rotate-45"
+            />
+          </Link>
         </div>
       </header>
-      <main className="flex flex-col min-h-screen my-10 mx-auto sm:min-w-xl md:min-w-2xl lg:min-w-3xl xl:min-w-4xl items-center text-zinc-800 rounded-3xl border border-zinc-300 bg-white/50 shadow-sm">
-        <div className="flex bg-[#F5F1E6] rounded-xl shadow-sm p-2 m-2 mt-8">
-          <input
-            type="text"
-            placeholder="Enter Course Title"
-            className="text-center border"
-          />
+
+      <main className="flex-1 flex flex-col items-center py-16 px-6">
+        <div className="w-full max-w-2xl bg-white rounded-3xl border border-zinc-200 p-10 shadow-xl shadow-zinc-200/50">
+          <div className="mb-10">
+            <h2 className="text-3xl font-black text-zinc-900 mb-2">
+              Create a Course
+            </h2>
+            <p className="text-zinc-500">
+              Fill in the details below to launch your new curriculum.
+            </p>
+          </div>
+
+          <form className="space-y-8">
+            {/* Course Title */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                <Type size={14} /> Course Title
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Advanced System Architecture"
+                className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-4 text-zinc-800 outline-none transition-all focus:border-zinc-800 focus:bg-white focus:ring-4 focus:ring-zinc-800/5"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                <FileText size={14} /> Description
+              </label>
+              <textarea
+                placeholder="Briefly describe the course objectives..."
+                rows={4}
+                className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-4 text-zinc-800 outline-none transition-all focus:border-zinc-800 focus:bg-white focus:ring-4 focus:ring-zinc-800/5 resize-none"
+              />
+            </div>
+
+            {/* Date Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                  <Calendar size={14} /> Start Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-4 text-zinc-800 outline-none transition-all focus:border-zinc-800 focus:bg-white"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 ml-1">
+                  <Calendar size={14} /> End Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-4 text-zinc-800 outline-none transition-all focus:border-zinc-800 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Submit */}
+            <div className="pt-6">
+              <Link
+                href="/course"
+                className="flex w-full items-center justify-center gap-3 rounded-2xl bg-zinc-900 py-5 font-bold text-[#F5F1E6] transition-all hover:bg-black hover:scale-[1.01] shadow-lg shadow-zinc-900/20"
+              >
+                <PlusCircle size={20} />
+                Create Course
+              </Link>
+            </div>
+          </form>
         </div>
-        <div className="flex flex-row bg-[#F5F1E6] rounded-xl shadow-sm p-2 m-2">
-          <input
-            type="text"
-            placeholder="Enter Course Description"
-            className="text-center border"
-          />
-        </div>
-        <div className="flex flex-row bg-[#F5F1E6] rounded-full shadow-sm p-5 pt-5 m-2 gap-5">
-          <h1>Enter course Start date:</h1>
-          <input type="date" className="text-right border pl-6" />
-        </div>
-        <div className="flex flex-row bg-[#F5F1E6] rounded-full shadow-sm p-5 pt-5 m-2 gap-5">
-          <h1>Enter course End date:</h1>
-          <input type="date" className="text-right border pl-6" />
-        </div>
-        <Link
-          href="/course"
-          className="flex items-center gap-2 rounded-xl bg-zinc-800 px-6 py-3 m-2 font-semibold text-[#F5F1E6] transition hover:opacity-90"
-        >
-          <PlusCircle size={18} />
-          Create Course
-        </Link>
       </main>
     </div>
   );

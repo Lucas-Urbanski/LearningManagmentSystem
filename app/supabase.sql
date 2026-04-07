@@ -117,3 +117,31 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
       AND courses."instructorId" = auth.uid()
     )
   );
+
+CREATE TABLE IF NOT EXISTS public.lesson (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  "courseID" TEXT NOT NULL,
+  title TEXT NOT NULL,
+  "fileName" TEXT NOT NULL,
+  "filePath" TEXT NOT NULL,
+  "fileUrl" TEXT,
+  "uploadedBy" UUID REFERENCES public.profiles(id),
+  "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.lesson ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR LESSON
+CREATE POLICY "Instructors can create their own lesson uploads"
+ON public.lesson
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() = "uploadedBy"
+  AND EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'instructor'
+  )
+);

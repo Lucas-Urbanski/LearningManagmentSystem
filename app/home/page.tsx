@@ -35,33 +35,63 @@ function HomeContent() {
   const [coursesError, setCoursesError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  const handleEnroll = async (courseId: string) => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("enrollments").insert([
+        {
+          courseId,
+          studentId: user.id,
+        },
+      ]);
+
+      if (error) {
+        if (error.code === "23505") {
+          return;
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Enrollment error:", error);
+      alert(error?.message || "Failed to enroll. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const fetchCourses = async () => {
       setCoursesLoading(true);
-      const { data, error } = await supabase.from("courses").select(`
-        id,
-        title,
-        description,
-        "startDate",
-        profiles!instructorId (
-          "fullName"
-        )
-      `);
+      setCoursesError(null);
 
-      if (error) {
-        setCoursesError(error.message);
-      } else {
-        setCourses(
-          (data || []).map((c: any) => ({
-            id: c.id,
-            title: c.title,
-            description: c.description,
-            instructor: c.profiles?.fullName || "Unknown Instructor",
-            startDate: c.startDate,
-          })),
-        );
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select(
+            `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`,
+          )
+          .order("createdAt", { ascending: false });
+
+        if (error) throw error;
+
+        const mappedCourses: Course[] =
+          data?.map((course: any) => ({
+            id: course.id,
+            title: course.title,
+            description: course.description ?? "",
+            instructor: course.profiles?.fullName ?? "Unknown",
+            startDate: course.startDate ?? "",
+            endDate: course.endDate ?? "",
+          })) ?? [];
+
+        setCourses(mappedCourses);
+      } catch (error: any) {
+        console.error("Failed to fetch courses:", error);
+        setCoursesError(error?.message || "Failed to load courses.");
+      } finally {
+        setCoursesLoading(false);
       }
-      setCoursesLoading(false);
     };
 
     fetchCourses();
@@ -72,41 +102,48 @@ function HomeContent() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F1E6]">
-      <header className="sticky top-0 z-10 border-b border-zinc-300 bg-white/80 backdrop-blur-md px-8 py-4">
+    <div className="min-h-screen bg-[#F5F1E6] text-zinc-800">
+      <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/80 px-8 py-4 backdrop-blur-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
             href="/home"
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            className="flex items-center gap-2 transition-transform hover:scale-95"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-[#F5F1E6]">
-              <BookOpen size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
+              <BookOpen size={20} />
             </div>
-            <span className="hidden text-xl font-bold text-zinc-800 sm:block">
+            <span className="hidden text-lg font-bold tracking-tight sm:block">
               CourseCanvas
             </span>
           </Link>
 
-          <div className="relative mx-4 sm:mr-14 flex-1 max-w-md">
+          <div className="relative mx-4 flex-1 max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
               size={18}
             />
             <input
               type="text"
-              placeholder="Search courses..."
+              placeholder="Search Courses..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl border border-zinc-300 bg-white px-10 py-2 text-zinc-800 outline-none transition focus:border-zinc-800"
             />
           </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right border-r border-zinc-200 pr-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                Signed in as
+              </p>
+              <p className="text-sm font-semibold text-zinc-800">
+                {user?.name || "User"}
+              </p>
+            </div>
 
-          <div className="flex items-center gap-5">
             <Link
               href="/settings"
-              className="flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-zinc-800 font-bold transition hover:bg-zinc-50 gap-2"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-300 bg-white shadow-sm transition-colors hover:bg-zinc-50"
             >
-              Settings
               <Settings
                 size={20}
                 className="transition-transform hover:rotate-45"
@@ -118,15 +155,15 @@ function HomeContent() {
 
       <main className="mx-auto max-w-7xl p-8">
         {loading || coursesLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-            <Loader2 className="mb-4 h-10 w-10 animate-spin text-zinc-800" />
-            <p className="font-medium">Loading your dashboard...</p>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <div className="flex items-center gap-3 text-zinc-500">
+              <Loader2 className="animate-spin" size={20} />
+              Loading courses...
+            </div>
           </div>
         ) : coursesError ? (
-          <div className="flex flex-col items-center justify-center py-20 text-red-500">
-            <p className="font-medium">
-              Failed to load courses: {coursesError}
-            </p>
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">
+            {coursesError}
           </div>
         ) : (
           <>
@@ -141,17 +178,14 @@ function HomeContent() {
                 </Link>
               )}
             </div>
+
             <div className="rounded-3xl border border-zinc-300 bg-white/50 p-8 shadow-sm">
               {filteredCourses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-6">
-                  <p className="text-center text-zinc-500">
-                    {search
-                      ? "No courses match your search."
-                      : "No courses available yet."}
-                  </p>
-                </div>
+                <p className="py-16 text-center text-zinc-500">
+                  No courses found.
+                </p>
               ) : (
-                <CourseCard courses={filteredCourses} />
+                <CourseCard courses={filteredCourses} onEnroll={handleEnroll} />
               )}
             </div>
           </>

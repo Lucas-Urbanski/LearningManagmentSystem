@@ -2,7 +2,7 @@
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
 DROP VIEW IF EXISTS public.instructor_records, public.student_records;
-DROP TABLE IF EXISTS public.profiles, public.courses, public.quizzes CASCADE;
+DROP TABLE IF EXISTS public.profiles, public.courses, public.lessons, public.enrollments, public.quizzes  CASCADE;
 
 -- PROFILES TABLE
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -92,12 +92,80 @@ WITH CHECK (
 CREATE POLICY "Instructors can manage their own courses"
   ON public.courses FOR ALL USING (auth.uid() = "instructorId");
 
+-- ENROLLMENTS TABLE
+CREATE TABLE IF NOT EXISTS public.enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
+  "studentId" UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  "enrolledAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE ("courseId", "studentId")
+);
+
+ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR ENROLLMENTS
+CREATE POLICY "Enrollments are viewable by everyone"
+  ON public.enrollments FOR SELECT USING (TRUE);
+
+CREATE POLICY "Students can enroll themselves"
+  ON public.enrollments FOR INSERT WITH CHECK (auth.uid() = "studentId");
+
+CREATE POLICY "Students can unenroll themselves"
+  ON public.enrollments FOR DELETE USING (auth.uid() = "studentId");
+
+-- LESSONS TABLE
+CREATE TABLE IF NOT EXISTS public.lessons (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  "fileName" TEXT NOT NULL,
+  "filePath" TEXT NOT NULL,
+  "fileUrl" TEXT,
+  "uploadedBy" UUID REFERENCES public.profiles(id),
+  "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR LESSON
+CREATE POLICY "Users can view lessons in their courses"
+ON public.lessons
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.enrollments
+    WHERE enrollments."courseId" = lessons."courseId"
+      AND enrollments."studentId" = auth.uid()
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM public.courses
+    WHERE courses.id = lessons."courseId"
+      AND courses."instructorId" = auth.uid()
+  )
+);
+
+CREATE POLICY "Instructors can create their own lesson uploads"
+ON public.lessons
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() = "uploadedBy"
+  AND EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'instructor'
+  )
+);
+
 -- QUIZZES TABLE
 CREATE TABLE IF NOT EXISTS public.quizzes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   "dueDate" DATE,
+  status TEXT CHECK (status IN ('open', 'closed')) DEFAULT 'closed',
   questions JSONB NOT NULL,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -117,31 +185,3 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
       AND courses."instructorId" = auth.uid()
     )
   );
-
-CREATE TABLE IF NOT EXISTS public.lesson (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  "courseID" TEXT NOT NULL,
-  title TEXT NOT NULL,
-  "fileName" TEXT NOT NULL,
-  "filePath" TEXT NOT NULL,
-  "fileUrl" TEXT,
-  "uploadedBy" UUID REFERENCES public.profiles(id),
-  "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE public.lesson ENABLE ROW LEVEL SECURITY;
-
--- RLS POLICIES FOR LESSON
-CREATE POLICY "Instructors can create their own lesson uploads"
-ON public.lesson
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  auth.uid() = "uploadedBy"
-  AND EXISTS (
-    SELECT 1
-    FROM public.profiles
-    WHERE id = auth.uid()
-      AND role = 'instructor'
-  )
-);

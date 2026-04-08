@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, User, ArrowRight } from "lucide-react";
+import { Calendar, User, GraduationCap } from "lucide-react";
 
 type Course = {
   id: string;
@@ -11,7 +11,20 @@ type Course = {
   startDate: string;
 };
 
-export default function CourseCard({ courses }: { courses: Course[] }) {
+interface CourseCardProps {
+  courses: Course[];
+  onEnroll?: (courseId: string) => void;
+}
+
+export default function CourseCard({ courses, onEnroll }: CourseCardProps) {
+  const handleEnrollClick = (e: React.MouseEvent, courseId: string) => {
+    if (onEnroll) {
+      onEnroll(courseId);
+    } else {
+      console.log("Enrolling in course:", courseId);
+    }
+  };
+
   return (
     <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
       {courses.map((course) => (
@@ -26,11 +39,17 @@ export default function CourseCard({ courses }: { courses: Course[] }) {
                 <span className="rounded-lg bg-[#F5F1E6] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border border-zinc-200">
                   {course.id.slice(0, 8)}
                 </span>
-                <ArrowRight
-                  size={18}
-                  className="text-zinc-300 transition-colors group-hover:text-zinc-800"
-                />
+
+                {/* Updated Button */}
+                <button
+                  onClick={(e) => handleEnrollClick(e, course.id)}
+                  className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-[11px] font-bold uppercase tracking-tight text-white transition-all hover:bg-black active:scale-95"
+                >
+                  <GraduationCap size={14} />
+                  Enroll
+                </button>
               </div>
+
               <h2 className="text-2xl font-bold leading-tight text-zinc-800 transition-colors group-hover:text-black">
                 {course.title}
               </h2>
@@ -38,6 +57,7 @@ export default function CourseCard({ courses }: { courses: Course[] }) {
                 {course.description}
               </p>
             </div>
+
             <div className="mt-8 pt-6 border-t border-zinc-100">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-sm text-zinc-700">

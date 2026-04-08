@@ -110,9 +110,9 @@ function QuizCreationContent() {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
             href="/home"
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            className="flex items-center gap-2 transition-transform hover:scale-95"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-[#F5F1E6]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
               <BookOpen size={20} />
             </div>
             <span className="hidden text-lg font-bold tracking-tight sm:block">

@@ -1,41 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, } from "react";
+import { useParams } from "next/navigation";
 import {
   BookOpen,
   Settings,
   CalendarDays,
-  Users,
   UserCircle,
   FileQuestion,
   ChevronRight,
   Plus,
   GraduationCap,
+  Lock,
   FileText,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import AuthGuard from "../../components/AuthGuard";
 import { createBrowserClient } from "@supabase/ssr";
 
-type LessonFile = {
-  id: number;
+type Course = {
+  id: string;
+  name: string;
+  description: string;
+  teacher: string;
+  startDate: string;
+  endDate: string;
+};
+
+type Quiz = {
+  id: string;
   title: string;
   dueDate: string;
   status: string;
-  fileUrl?: string;
-  fileName?: string;
 };
 
-export default function CoursePage({ params }: { params: { uuid: string } }) {
-  return (
-    <AuthGuard>
-      <CourseContent params={params} />
-    </AuthGuard>
-  );
-}
+type Student = {
+  id: string;
+  fullName: string;
+};
 
-function CourseContent({ params }: { params: { uuid: string } }) {
+type Lesson = {
+  id: string;
+  title: string;
+  fileName: string;
+  fileUrl: string;
+};
+
+function CourseContent() {
+  const params = useParams<{ uuid: string | string[] }>();
+  const uuid = Array.isArray(params.uuid) ? params.uuid[0] : params.uuid;
+
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -44,87 +60,91 @@ function CourseContent({ params }: { params: { uuid: string } }) {
       ),
     [],
   );
+
   const { user } = useAuth();
   const isTeacher = user?.role === "instructor";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [uploading, setUploading] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [lessons, setLessons] = useState<LessonFile[]>([
-    {
-      id: 1,
-      title: "HTML Basics Slides",
-      dueDate: "May 19, 2026",
-      status: "Open",
-      fileUrl: "",
-      fileName: "",
-    },
-    {
-      id: 2,
-      title: "CSS Fundamentals Notes",
-      dueDate: "June 3, 2026",
-      status: "Locked",
-      fileUrl: "",
-      fileName: "",
-    },
-    {
-      id: 3,
-      title: "JavaScript Intro Lesson",
-      dueDate: "June 17, 2026",
-      status: "Locked",
-      fileUrl: "",
-      fileName: "",
-    },
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
 
-  const callCourse = async () => {
-    const { uuid } = params;
-    const { error: courseError } = await supabase
-      .from("courses")
-      .select("title, description, startDate, endDate")
-      .eq("id", uuid)
-      .single();
+      try {
+        const [courseRes, quizRes, enrollmentRes, lessonsRes] =
+          await Promise.all([
+            supabase
+              .from("courses")
+              .select(
+                `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`,
+              )
+              .eq("id", uuid)
+              .single(),
 
-    if (courseError) {
-      console.error("Error fetching course:", courseError);
-    }
-  };
+            supabase
+              .from("quizzes")
+              .select(`id, title, status, "dueDate"`)
+              .eq("courseId", uuid),
 
-  const callQuiz = async () => {
-    const { error: quizError } = await supabase
-      .from("quizzes")
-      .select("title, dueDate")
-      .eq("id", 1)
-      .single();
-  };
+            supabase
+              .from("enrollments")
+              .select(`student:studentId (id, "fullName")`)
+              .eq("courseId", uuid),
 
-  const course = {
-    name: "Introduction to Web Development",
-    teacher: "Prof. Sarah Johnson",
-    startDate: "May 6, 2026",
-    endDate: "August 20, 2026",
-    students: ["Alex Brown", "Jamie Lee", "Taylor Smith", "Jordan White"],
-    quizzes: [
-      {
-        id: 1,
-        title: "HTML Basics Quiz",
-        dueDate: "May 20, 2026",
-        status: "Open",
-      },
-      {
-        id: 2,
-        title: "CSS Fundamentals Quiz",
-        dueDate: "June 3, 2026",
-        status: "Locked",
-      },
-      {
-        id: 3,
-        title: "JavaScript Intro Quiz",
-        dueDate: "June 17, 2026",
-        status: "Locked",
-      },
-    ],
-  };
+            supabase
+              .from("lessons")
+              .select("id, title, fileName, fileUrl, uploadedAt")
+              .eq("courseId", uuid)
+              .order("uploadedAt", { ascending: false }),
+          ]);
+
+        if (courseRes.error) throw courseRes.error;
+        if (quizRes.error) throw quizRes.error;
+        if (enrollmentRes.error) throw enrollmentRes.error;
+        if (lessonsRes.error) throw lessonsRes.error;
+
+        const rawCourse = courseRes.data as any;
+        setCourse(
+          rawCourse
+            ? {
+                id: rawCourse.id,
+                name: rawCourse.title,
+                description: rawCourse.description ?? "",
+                teacher: rawCourse.profiles?.fullName ?? "Unknown Instructor",
+                startDate: rawCourse.startDate ?? "",
+                endDate: rawCourse.endDate ?? "",
+              }
+            : null,
+        );
+
+        setQuizzes(quizRes.data ?? []);
+        setStudents(
+          (enrollmentRes.data || []).map((e: any) => e.student).filter(Boolean),
+        );
+
+        setLessons(
+          (lessonsRes.data || []).map((lesson: any) => ({
+            id: lesson.id,
+            title: lesson.title,
+            fileName: lesson.fileName,
+            fileUrl: lesson.fileUrl,
+          })),
+        );
+      } catch (err) {
+        console.error("Fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (uuid) fetchData();
+  }, [uuid, supabase]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -132,89 +152,80 @@ function CourseContent({ params }: { params: { uuid: string } }) {
 
   const handleLessonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
-    if (!file) return;
+    if (!file || !course || !uuid) return;
 
     const {
       data: { user: liveUser },
       error: userError,
     } = await supabase.auth.getUser();
-
-    console.log("LIVE USER:", liveUser);
-    console.log("USER ERROR:", userError);
-
     if (userError || !liveUser) {
-      alert("You are not authenticated. Please sign in again.");
-      e.target.value = "";
+      alert("Authentication error.");
       return;
     }
 
     try {
       setUploading(true);
-
       const safeName = file.name.replace(/\s+/g, "_");
-      const filePath = `${course.name}/${Date.now()}_${safeName}`;
+      const filePath = `${uuid}/${Date.now()}_${safeName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload to Storage
+      const { error: uploadError } = await supabase.storage
         .from("lesson-files")
-        .upload(filePath, file, {
-          upsert: false,
-        });
+        .upload(filePath, file);
 
-      console.log("UPLOAD DATA:", uploadData);
-      console.log("UPLOAD ERROR:", uploadError);
+      if (uploadError) throw uploadError;
 
-      if (uploadError) {
-        throw new Error(`Storage upload failed: ${uploadError.message}`);
-      }
+      // Get Public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("lesson-files").getPublicUrl(filePath);
 
-      const { data: publicUrlData } = supabase.storage
-        .from("lesson-files")
-        .getPublicUrl(filePath);
+      // Insert into 'lessons' table
+      const { data: insertedData, error: insertError } = await supabase
+        .from("lessons")
+        .insert([
+          {
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            fileName: file.name,
+            filePath: filePath,
+            fileUrl: publicUrl,
+            courseId: uuid,
+            uploadedBy: liveUser.id,
+          },
+        ])
+        .select()
+        .single();
 
-      const publicUrl = publicUrlData.publicUrl;
+      if (insertError) throw insertError;
 
-      const newLesson = {
-        title: file.name.replace(/\.[^/.]+$/, ""),
-        fileName: file.name,
-        filePath: filePath,
-        fileUrl: publicUrl,
-        courseName: course.name,
-        uploadedBy: liveUser.id,
-      };
-
-      const { data: insertData, error: insertError } = await supabase
-        .from("lesson_uploads")
-        .insert([newLesson]);
-
-      console.log("INSERT DATA:", insertData);
-      console.log("INSERT ERROR:", insertError);
-
-      if (insertError) {
-        throw new Error(`Database insert failed: ${insertError.message}`);
-      }
-
-      setLessons((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          title: newLesson.title,
-          dueDate: "New Upload",
-          status: "Open",
-          fileUrl: publicUrl,
-          fileName: file.name,
-        },
-      ]);
-
-      alert("Lesson uploaded successfully.");
+      setLessons((prev) => [insertedData, ...prev]);
+      alert("Lesson uploaded!");
     } catch (error: any) {
-      console.error("Upload failed:", error);
+      console.error("Upload failed:", error.message);
       alert(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
       e.target.value = "";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F1E6]">
+        <div className="animate-pulse font-bold text-zinc-400">
+          Loading Course...
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F1E6]">
+        <p className="text-zinc-500">Course not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F1E6] text-zinc-800">
@@ -254,86 +265,88 @@ function CourseContent({ params }: { params: { uuid: string } }) {
         </div>
       </header>
 
-      <main className="mx-auto px-6 py-12">
-        <section className="relative mb-12 rounded-[2.5rem] bg-zinc-900 p-10 text-white shadow-2xl">
-          <div className="relative z-10">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
-              <GraduationCap size={14} /> Active Course
-            </div>
-            <h1 className="text-2xl font-black sm:text-3xl md:text-4xl lg:text-5xl">
-              {course.name}
-            </h1>
-
-            <div className="mt-10 grid gap-6 md:grid-cols-2">
-              <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="rounded-xl bg-white/10 p-2">
-                  <UserCircle size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase opacity-50">
-                    Instructor
-                  </p>
-                  <p className="text-sm font-semibold">{course.teacher}</p>
-                </div>
+      <main className="mx-auto space-y-8 px-6 py-12">
+        <section className="rounded-3xl bg-zinc-900 p-10 text-white shadow-2xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-[10px] font-bold uppercase tracking-widest">
+            <GraduationCap size={14} /> Active Course
+          </div>
+          <h1 className="text-2xl font-black sm:text-3xl md:text-4xl lg:text-5xl">
+            {course.name}
+          </h1>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-xl bg-white/10 p-2">
+                <UserCircle size={24} />
               </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="rounded-xl bg-white/10 p-2">
-                  <CalendarDays size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase opacity-50">
-                    Schedule
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {course.startDate} - {course.endDate}
-                  </p>
-                </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase opacity-50">
+                  Instructor
+                </p>
+                <p className="text-sm font-semibold">{course.teacher}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-xl bg-white/10 p-2">
+                <CalendarDays size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase opacity-50">
+                  Schedule
+                </p>
+                <p className="text-sm font-semibold">
+                  {course.startDate} - {course.endDate}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <div className="rounded-4xl border border-zinc-200 bg-white p-8 shadow-sm">
+        <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-lg font-bold">
               <Users size={20} className="text-zinc-400" />
-              {isTeacher ? "Class Enrollment" : "Course Info"}
+              {isTeacher ? "Class Enrollment" : "About This Course"}
             </h3>
             {isTeacher && (
               <span className="rounded bg-zinc-100 px-2 py-1 text-[10px] font-bold text-zinc-500">
-                {course.students.length} Total
+                {students.length} Total
               </span>
             )}
           </div>
 
           {isTeacher ? (
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {course.students.map((student, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 rounded-xl border border-zinc-50 bg-zinc-50/50 p-3 text-sm font-medium"
-                >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold uppercase">
-                    {student
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+            students.length === 0 ? (
+              <p className="py-8 text-center text-zinc-400">
+                No students enrolled yet.
+              </p>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {students.map((student) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-sm font-medium"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold uppercase text-white">
+                      {student.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                    {student.fullName}
                   </div>
-                  {student}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           ) : (
-            <div className="text-sm italic leading-relaxed text-zinc-600">
-              "The goal of this course is to provide a solid foundation in
-              modern web technologies, moving from structure to style and
-              interaction."
-            </div>
+            <p className="text-sm leading-relaxed text-zinc-600">
+              {course.description || "No description provided."}
+            </p>
           )}
         </div>
 
-        <div className="grid gap-4">
-          <div className="mt-8 flex items-center justify-between px-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
             <h2 className="flex items-center gap-2 text-2xl font-bold">
               <FileText size={24} /> Lessons
             </h2>
@@ -343,57 +356,33 @@ function CourseContent({ params }: { params: { uuid: string } }) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.ppt,.pptx,.doc,.docx"
                   className="hidden"
                   onChange={handleLessonUpload}
                 />
-
                 <button
-                  type="button"
                   onClick={handleUploadClick}
                   disabled={uploading}
-                  className="group flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black disabled:opacity-60"
+                  className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black disabled:opacity-50"
                 >
-                  <Plus size={16} />
-                  {uploading ? "Uploading..." : "Upload Lessons"}
+                  {uploading ? (
+                    "Uploading..."
+                  ) : (
+                    <>
+                      <Plus size={16} /> Upload Lesson
+                    </>
+                  )}
                 </button>
               </>
             )}
           </div>
 
-          <div className="grid items-center gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {lessons.map((lesson) => {
-              const content = (
-                <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-                        lesson.status === "Open"
-                          ? "bg-zinc-100 text-zinc-800"
-                          : "bg-zinc-50 text-zinc-300"
-                      }`}
-                    >
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold group-hover:text-black">
-                        {lesson.title}
-                      </h3>
-                      <p className="text-sm text-zinc-500">
-                        {lesson.fileName
-                          ? lesson.fileName
-                          : `Due ${lesson.dueDate}`}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight
-                    size={20}
-                    className="text-zinc-300 transition-colors group-hover:text-zinc-800"
-                  />
-                </div>
-              );
-
-              return lesson.fileUrl ? (
+          {lessons.length === 0 ? (
+            <p className="py-12 text-center text-zinc-400">
+              No lessons uploaded yet.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {lessons.map((lesson) => (
                 <a
                   key={lesson.id}
                   href={lesson.fileUrl}
@@ -401,75 +390,127 @@ function CourseContent({ params }: { params: { uuid: string } }) {
                   rel="noreferrer"
                   className="group block"
                 >
-                  {content}
+                  <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800">
+                        <FileText size={20} />
+                      </div>
+                      <div className="max-w-[150px] sm:max-w-full">
+                        <h3 className="truncate text-lg font-bold group-hover:text-black">
+                          {lesson.title}
+                        </h3>
+                        <p className="truncate text-xs text-zinc-500">
+                          {lesson.fileName}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight
+                      size={20}
+                      className="text-zinc-300 transition-colors group-hover:text-zinc-800"
+                    />
+                  </div>
                 </a>
-              ) : (
-                <div key={lesson.id} className="group block">
-                  {content}
-                </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="grid gap-4">
-          <div className="mt-8 flex items-center justify-between px-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
             <h2 className="flex items-center gap-2 text-2xl font-bold">
               <FileQuestion size={24} /> Quizzes
             </h2>
             {isTeacher && (
               <Link
-                href="/quizCreation"
-                className="group flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black"
+                href={`/quizCreation?courseId=${uuid}`}
+                className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black"
               >
                 <Plus size={16} /> Create Quiz
               </Link>
             )}
           </div>
 
-          <div className="grid items-center gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {course.quizzes.map((quiz) => {
-              const content = (
-                <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
-                        quiz.status === "Open"
-                          ? "bg-zinc-100 text-zinc-800"
-                          : "bg-zinc-50 text-zinc-300"
-                      }`}
-                    >
-                      <FileQuestion size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold group-hover:text-black">
-                        {quiz.title}
-                      </h3>
-                      <p className="text-sm text-zinc-500">
-                        Due {quiz.dueDate}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight
-                    size={20}
-                    className="text-zinc-300 transition-colors group-hover:text-zinc-800"
-                  />
-                </div>
-              );
+          {quizzes.length === 0 ? (
+            <p className="py-12 text-center text-zinc-400">No quizzes yet.</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {quizzes.map((quiz) => {
+                const isOpen = quiz.status === "Open";
 
-              return quiz.status === "Open" ? (
-                <Link key={quiz.id} href="/quiz" className="group block">
-                  {content}
-                </Link>
-              ) : (
-                <div key={quiz.id} className="group block">
-                  {content}
-                </div>
-              );
-            })}
-          </div>
+                const card = (
+                  <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                          isOpen
+                            ? "bg-zinc-100 text-zinc-800"
+                            : "bg-zinc-50 text-zinc-300"
+                        }`}
+                      >
+                        {isOpen ? (
+                          <FileQuestion size={20} />
+                        ) : (
+                          <Lock size={20} />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold group-hover:text-black">
+                            {quiz.title}
+                          </h3>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              isOpen
+                                ? "bg-green-100 text-green-700"
+                                : "bg-zinc-100 text-zinc-400"
+                            }`}
+                          >
+                            {quiz.status}
+                          </span>
+                        </div>
+                        {quiz.dueDate && (
+                          <p className="text-sm text-zinc-500">
+                            Due {quiz.dueDate}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <ChevronRight
+                        size={20}
+                        className="text-zinc-300 transition-colors group-hover:text-zinc-800"
+                      />
+                    )}
+                  </div>
+                );
+
+                return isOpen ? (
+                  <Link
+                    key={quiz.id}
+                    href={`/quiz/${quiz.id}`}
+                    className="group block"
+                  >
+                    {card}
+                  </Link>
+                ) : (
+                  <div key={quiz.id} className="block">
+                    {card}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CoursePage() {
+  return (
+    <AuthGuard>
+      <CourseContent />
+    </AuthGuard>
   );
 }

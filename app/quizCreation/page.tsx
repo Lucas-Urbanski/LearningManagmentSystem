@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckCircle2,
   Trash2,
+  Type,
 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useAuth } from "../context/AuthContext";
@@ -141,11 +142,15 @@ function QuizCreationContent() {
         <section className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="grid gap-8 md:grid-cols-2">
             <div className="space-y-2">
+              <label className="ml-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500">
+                <Type size={14} /> Quiz Title
+              </label>
               <input
               type="text"
               placeholder="Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-2xl border border-zinc-100 bg-zinc-50 px-5 py-3 mb-8 text-lg font-bold outline-none transition-all focus:border-zinc-800 focus:bg-white"
               >
               </input>
               <label className="ml-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500">

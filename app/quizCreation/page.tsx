@@ -19,17 +19,13 @@ type Question = {
   id: number;
 };
 
-export default function QuizCreation() {
-   const { user } = useAuth();
+function QuizCreationContent() {
+  const { user } = useAuth();
   const today = new Date();
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(today.toLocaleDateString());
   const [questions, setQuestions] = useState<Question[]>([{ id: 1 }]);
-
-
-
-function QuizCreationContent() {
     const supabase = useMemo(
       () =>
         createBrowserClient(

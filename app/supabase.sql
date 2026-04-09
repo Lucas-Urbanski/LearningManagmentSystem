@@ -77,6 +77,9 @@ ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Courses are viewable by everyone"
   ON public.courses FOR SELECT USING (TRUE);
 
+CREATE POLICY "Instructors can manage their own courses"
+  ON public.courses FOR ALL USING (auth.uid() = "instructorId");
+
 CREATE POLICY "Instructors can create their own courses"
 ON public.courses
 FOR INSERT
@@ -88,9 +91,6 @@ WITH CHECK (
     AND role = 'instructor'
   )
 );
-
-CREATE POLICY "Instructors can manage their own courses"
-  ON public.courses FOR ALL USING (auth.uid() = "instructorId");
 
 -- ENROLLMENTS TABLE
 CREATE TABLE IF NOT EXISTS public.enrollments (
@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   "dueDate" DATE,
   status TEXT CHECK (status IN ('open', 'closed')) DEFAULT 'closed',
   questions JSONB NOT NULL,
+  answers JSONB NOT NULL,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

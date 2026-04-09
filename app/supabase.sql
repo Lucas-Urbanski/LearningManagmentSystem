@@ -186,3 +186,88 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
       AND courses."instructorId" = auth.uid()
     )
   );
+
+-- STORAGE POLICIES FOR lesson-files BUCKET
+DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
+DROP POLICY IF EXISTS "Lesson files are viewable by everyone" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own lesson files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own lesson files" ON storage.objects;
+
+CREATE POLICY "Authenticated users can upload lesson files"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'lesson-files'
+);
+
+CREATE POLICY "Lesson files are viewable by everyone"
+ON storage.objects
+FOR SELECT
+USING (
+  bucket_id = 'lesson-files'
+);
+
+CREATE POLICY "Users can update their own lesson files"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'lesson-files'
+  AND owner_id = auth.uid()
+)
+WITH CHECK (
+  bucket_id = 'lesson-files'
+  AND owner_id = auth.uid()
+);
+
+CREATE POLICY "Users can delete their own lesson files"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'lesson-files'
+  AND owner_id = auth.uid()
+);
+
+CREATE POLICY "Authenticated instructors can insert lessons"
+ON public.lessons
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND auth.uid() = "uploadedBy"
+  AND EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE profiles.id = auth.uid()
+      AND profiles.role = 'instructor'
+  )
+);
+
+CREATE POLICY "Authenticated instructors can insert lessons for their own courses"
+ON public.lessons
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND auth.uid() = "uploadedBy"
+  AND EXISTS (
+    SELECT 1
+    FROM public.courses
+    WHERE courses.id = "courseId"
+      AND courses."instructorId" = auth.uid()
+  )
+);
+
+CREATE POLICY "Instructors can create their own quizzes"
+ON public.quizzes
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() 
+    AND role = 'instructor'
+  )
+);

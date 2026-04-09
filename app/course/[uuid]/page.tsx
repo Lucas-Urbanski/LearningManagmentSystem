@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef, useMemo, } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import {
   BookOpen,
@@ -11,14 +11,16 @@ import {
   FileQuestion,
   ChevronRight,
   Plus,
+  Upload,
   GraduationCap,
   Lock,
   FileText,
   Users,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import AuthGuard from "../../components/AuthGuard";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase";
 
 type Course = {
   id: string;
@@ -46,32 +48,28 @@ type Lesson = {
   title: string;
   fileName: string;
   fileUrl: string;
+  filePath: string;
 };
 
 function CourseContent() {
   const params = useParams<{ uuid: string | string[] }>();
   const uuid = Array.isArray(params.uuid) ? params.uuid[0] : params.uuid;
 
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      ),
-    [],
-  );
+  const supabase = useMemo(() => createClient(), []);
 
   const { user } = useAuth();
   const isTeacher = user?.role === "instructor";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [uploading, setUploading] = useState(false);
+  const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
+  localStorage.setItem("courseid", course?.id || "null");
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -82,7 +80,7 @@ function CourseContent() {
             supabase
               .from("courses")
               .select(
-                `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`,
+                `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`
               )
               .eq("id", uuid)
               .single(),
@@ -99,7 +97,7 @@ function CourseContent() {
 
             supabase
               .from("lessons")
-              .select("id, title, fileName, fileUrl, uploadedAt")
+              .select(`id, title, "fileName", "fileUrl", "filePath", "uploadedAt"`)
               .eq("courseId", uuid)
               .order("uploadedAt", { ascending: false }),
           ]);
@@ -110,6 +108,7 @@ function CourseContent() {
         if (lessonsRes.error) throw lessonsRes.error;
 
         const rawCourse = courseRes.data as any;
+
         setCourse(
           rawCourse
             ? {
@@ -120,21 +119,29 @@ function CourseContent() {
                 startDate: rawCourse.startDate ?? "",
                 endDate: rawCourse.endDate ?? "",
               }
-            : null,
+            : null
         );
 
-        setQuizzes(quizRes.data ?? []);
+        setQuizzes(
+          (quizRes.data ?? []).map((quiz: any) => ({
+            ...quiz,
+            status: quiz.status === "open" ? "Open" : "Locked",
+            dueDate: quiz.dueDate ?? "",
+          }))
+        );
+
         setStudents(
-          (enrollmentRes.data || []).map((e: any) => e.student).filter(Boolean),
+          (enrollmentRes.data || []).map((e: any) => e.student).filter(Boolean)
         );
 
         setLessons(
           (lessonsRes.data || []).map((lesson: any) => ({
-            id: lesson.id,
+            id: String(lesson.id),
             title: lesson.title,
             fileName: lesson.fileName,
             fileUrl: lesson.fileUrl,
-          })),
+            filePath: lesson.filePath,
+          }))
         );
       } catch (err) {
         console.error("Fetch failed:", err);
@@ -158,54 +165,118 @@ function CourseContent() {
       data: { user: liveUser },
       error: userError,
     } = await supabase.auth.getUser();
+
+    console.log("LIVE USER:", liveUser);
+    console.log("USER ERROR:", userError);
+
     if (userError || !liveUser) {
-      alert("Authentication error.");
+      alert("Authentication error. Please sign in again.");
+      e.target.value = "";
       return;
     }
 
     try {
       setUploading(true);
+
       const safeName = file.name.replace(/\s+/g, "_");
       const filePath = `${uuid}/${Date.now()}_${safeName}`;
 
-      // Upload to Storage
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("lesson-files")
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: false });
 
-      if (uploadError) throw uploadError;
+      console.log("UPLOAD DATA:", uploadData);
+      console.log("UPLOAD ERROR:", uploadError);
 
-      // Get Public URL
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      }
+
       const {
         data: { publicUrl },
       } = supabase.storage.from("lesson-files").getPublicUrl(filePath);
 
-      // Insert into 'lessons' table
+      const insertPayload = {
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        fileName: file.name,
+        filePath,
+        fileUrl: publicUrl,
+        courseId: uuid,
+        uploadedBy: liveUser.id,
+      };
+
+      console.log("UUID FROM URL:", uuid);
+      console.log("LIVE USER ID:", liveUser.id);
+      console.log("LESSON INSERT PAYLOAD:", insertPayload);
+
       const { data: insertedData, error: insertError } = await supabase
         .from("lessons")
-        .insert([
-          {
-            title: file.name.replace(/\.[^/.]+$/, ""),
-            fileName: file.name,
-            filePath: filePath,
-            fileUrl: publicUrl,
-            courseId: uuid,
-            uploadedBy: liveUser.id,
-          },
-        ])
-        .select()
+        .insert([insertPayload])
+        .select(`id, title, "fileName", "fileUrl", "filePath"`)
         .single();
 
-      if (insertError) throw insertError;
+      console.log("INSERT DATA:", insertedData);
+      console.log("INSERT ERROR:", insertError);
 
-      setLessons((prev) => [insertedData, ...prev]);
+      if (insertError) {
+        throw new Error(`Database insert failed: ${insertError.message}`);
+      }
+
+      setLessons((prev) => [
+        {
+          ...(insertedData as Lesson),
+          id: String((insertedData as any).id),
+        },
+        ...prev,
+      ]);
       alert("Lesson uploaded!");
     } catch (error: any) {
-      console.error("Upload failed:", error.message);
+      console.error("Upload failed:", error);
       alert(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
       e.target.value = "";
+    }
+  };
+
+  const handleDeleteLesson = async (lesson: Lesson) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${lesson.title}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingLessonId(lesson.id);
+
+      const { error: storageError } = await supabase.storage
+        .from("lesson-files")
+        .remove([lesson.filePath]);
+
+      console.log("STORAGE DELETE ERROR:", storageError);
+
+      if (storageError) {
+        throw new Error(`Storage delete failed: ${storageError.message}`);
+      }
+
+      const { error: dbError } = await supabase
+        .from("lessons")
+        .delete()
+        .eq("id", lesson.id);
+
+      console.log("LESSON DELETE ERROR:", dbError);
+
+      if (dbError) {
+        throw new Error(`Database delete failed: ${dbError.message}`);
+      }
+
+      setLessons((prev) => prev.filter((l) => l.id !== lesson.id));
+      alert("Lesson deleted!");
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      alert(`Delete failed: ${error.message}`);
+    } finally {
+      setDeletingLessonId(null);
     }
   };
 
@@ -360,6 +431,7 @@ function CourseContent() {
                   onChange={handleLessonUpload}
                 />
                 <button
+                  type="button"
                   onClick={handleUploadClick}
                   disabled={uploading}
                   className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black disabled:opacity-50"
@@ -368,7 +440,7 @@ function CourseContent() {
                     "Uploading..."
                   ) : (
                     <>
-                      <Plus size={16} /> Upload Lesson
+                      <Upload size={16} /> Upload Lesson
                     </>
                   )}
                 </button>
@@ -383,33 +455,53 @@ function CourseContent() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {lessons.map((lesson) => (
-                <a
-                  key={lesson.id}
-                  href={lesson.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block"
-                >
-                  <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800">
-                        <FileText size={20} />
-                      </div>
-                      <div className="max-w-[150px] sm:max-w-full">
-                        <h3 className="truncate text-lg font-bold group-hover:text-black">
-                          {lesson.title}
-                        </h3>
-                        <p className="truncate text-xs text-zinc-500">
-                          {lesson.fileName}
-                        </p>
+                <div key={lesson.id} className="group block">
+                  <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
+                    <div className="flex items-start justify-between gap-4">
+                      <a
+                        href={lesson.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 flex-1 items-center gap-4"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800">
+                          <FileText size={20} />
+                        </div>
+                        <div className="min-w-0 max-w-[150px] sm:max-w-full">
+                          <h3 className="truncate text-lg font-bold group-hover:text-black">
+                            {lesson.title}
+                          </h3>
+                          <p className="truncate text-xs text-zinc-500">
+                            {lesson.fileName}
+                          </p>
+                        </div>
+                      </a>
+
+                      <div className="flex items-center gap-2">
+                        {isTeacher && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLesson(lesson)}
+                            disabled={deletingLessonId === lesson.id}
+                            className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Delete lesson"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+
+                        <a
+                          href={lesson.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-zinc-300 transition-colors hover:text-zinc-800"
+                        >
+                          <ChevronRight size={20} />
+                        </a>
                       </div>
                     </div>
-                    <ChevronRight
-                      size={20}
-                      className="text-zinc-300 transition-colors group-hover:text-zinc-800"
-                    />
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           )}

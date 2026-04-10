@@ -36,7 +36,6 @@ function CourseCreationContent() {
 
   const handleCreateCourse = async () => {
     if (!user) {
-      alert("You must be signed in to create a course.");
       return;
     }
 

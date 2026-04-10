@@ -51,7 +51,7 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
         const isConfirming = pendingDelete === course.id;
 
         return (
-          <Link key={course.id} href={`/course/${course.id}`} className="group block">
+          <Link key={course.id} href={`/pages/course/${course.id}`} className="group block">
             <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-zinc-300 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
               <div>
                 <div className="mb-4 flex items-center justify-between">

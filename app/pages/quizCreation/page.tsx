@@ -14,8 +14,8 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import AuthGuard from "../components/AuthGuard";
-import { useAuth } from "../context/AuthContext";
+import AuthGuard from "../../components/AuthGuard";
+import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 
 type QuestionChoice = "A" | "B" | "C" | "D";
@@ -86,7 +86,7 @@ function QuizCreationContent() {
 
       if (error) throw error;
 
-      router.push(`/course/${courseId}`);
+      router.push(`/pages/course/${courseId}`);
     } catch (error: any) {
       console.error("Error creating quiz:", error);
       alert(error?.message || "Failed to create quiz.");
@@ -158,7 +158,7 @@ function QuizCreationContent() {
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/70 px-8 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
-            href="/home"
+            href="/pages/home"
             className="flex items-center gap-2 transition-transform hover:scale-95"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
@@ -174,7 +174,7 @@ function QuizCreationContent() {
           </h1>
 
           <Link
-            href="/settings"
+            href="/pages/settings"
             className="flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 font-bold text-zinc-800 transition hover:bg-zinc-50"
           >
             Settings

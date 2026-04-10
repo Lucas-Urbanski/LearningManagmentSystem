@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Settings, BookOpen, Search, PlusCircle, Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import CourseCard from "../components/courseCard";
-import { useAuth } from "../context/AuthContext";
-import AuthGuard from "../components/AuthGuard";
+import CourseCard from "../../components/courseCard";
+import { useAuth } from "../../context/AuthContext";
+import AuthGuard from "../../components/AuthGuard";
 
 type Course = {
   id: string;
@@ -121,7 +121,7 @@ function HomeContent() {
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/80 px-8 py-4 backdrop-blur-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
-            href="/home"
+            href="/pages/home"
             className="flex items-center gap-2 transition-transform hover:scale-95"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
@@ -156,7 +156,7 @@ function HomeContent() {
               </p>
             </div>
             <Link
-              href="/settings"
+              href="/pages/settings"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-300 bg-white shadow-sm transition-colors hover:bg-zinc-50"
             >
               <Settings
@@ -185,7 +185,7 @@ function HomeContent() {
             {isTeacher && (
               <div className="flex items-center justify-center">
                 <Link
-                  href="/courseCreation"
+                  href="/pages/courseCreation"
                   className="flex items-center gap-2 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-[#F5F1E6] transition hover:opacity-90"
                 >
                   <PlusCircle size={18} />

@@ -18,8 +18,8 @@ import {
   Users,
   Trash2,
 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import AuthGuard from "../../components/AuthGuard";
+import { useAuth } from "../../../context/AuthContext";
+import AuthGuard from "../../../components/AuthGuard";
 import { createClient } from "@/lib/supabase";
 
 type Course = {
@@ -303,7 +303,7 @@ function CourseContent() {
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/80 px-8 py-4 backdrop-blur-lg">
         <div className="mx-auto flex items-center justify-between">
           <Link
-            href="/home"
+            href="/pages/home"
             className="flex items-center gap-2 transition-transform hover:scale-95"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-white">
@@ -324,7 +324,7 @@ function CourseContent() {
               </p>
             </div>
             <Link
-              href="/settings"
+              href="/pages/settings"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-300 bg-white shadow-sm transition-colors hover:bg-zinc-50"
             >
               <Settings
@@ -514,7 +514,7 @@ function CourseContent() {
             </h2>
             {isTeacher && (
               <Link
-                href={`/quizCreation?courseId=${uuid}`}
+                href={`/pages/quizCreation?courseId=${uuid}`}
                 className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-bold text-[#F5F1E6] transition-all hover:bg-black"
               >
                 <Plus size={16} /> Create Quiz
@@ -580,7 +580,7 @@ function CourseContent() {
                 return isOpen ? (
                   <Link
                     key={quiz.id}
-                    href={`/quiz/${quiz.id}`}
+                    href={`/pages/quiz/${quiz.id}`}
                     className="group block"
                   >
                     {card}

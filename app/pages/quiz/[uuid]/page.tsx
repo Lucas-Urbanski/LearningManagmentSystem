@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Check, CheckCircle2, Circle } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
-import AuthGuard from "../../components/AuthGuard";
+import AuthGuard from "../../../components/AuthGuard";
 
 type QuestionChoice = "A" | "B" | "C" | "D";
 

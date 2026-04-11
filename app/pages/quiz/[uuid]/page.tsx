@@ -223,7 +223,7 @@ function QuizContent() {
               type="button"
               onClick={() => {
                 localStorage.removeItem(`quiz-answers-${uuid}`);
-                router.push(`/course/${quiz.courseId}`);
+                router.push(`/pages/course/${quiz.courseId}`);
               }}
               disabled={Object.keys(answers).length !== questions.length}
               className={`group flex items-center gap-3 rounded-2xl px-12 py-5 font-bold transition-all shadow-xl ${

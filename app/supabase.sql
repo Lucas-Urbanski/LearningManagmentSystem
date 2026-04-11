@@ -2,7 +2,7 @@
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
 DROP VIEW IF EXISTS public.instructor_records, public.student_records;
-DROP TABLE IF EXISTS public.profiles, public.courses, public.lessons, public.enrollments, public.quizzes  CASCADE;
+DROP TABLE IF EXISTS public.profiles, public.courses, public.lessons, public.enrollments, public.quizzes, public.grades  CASCADE;
 
 -- PROFILES TABLE
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS public.lessons (
   "fileName" TEXT NOT NULL,
   "filePath" TEXT NOT NULL,
   "fileUrl" TEXT,
+  published BOOLEAN DEFAULT FALSE,
   "uploadedBy" UUID REFERENCES public.profiles(id),
   "uploadedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -166,6 +167,7 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   title TEXT NOT NULL,
   "dueDate" DATE,
   status TEXT CHECK (status IN ('open', 'closed')) DEFAULT 'closed',
+  published BOOLEAN DEFAULT FALSE,
   questions JSONB NOT NULL,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()

@@ -35,7 +35,7 @@ type Quiz = {
   id: string;
   title: string;
   dueDate: string;
-  status: "Open" | "Locked";
+  timeLimit: number;
   published: boolean;
 };
 
@@ -51,6 +51,13 @@ type Lesson = {
   fileUrl: string;
   filePath: string;
   published: boolean;
+};
+
+type Grade = {
+  studentId: string;
+  quizId: string;
+  courseId: string;
+  score: number;
 };
 
 function CourseContent() {
@@ -75,12 +82,17 @@ function CourseContent() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
 
   const [uploading, setUploading] = useState(false);
   const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null);
   const [deletingQuizId, setDeletingQuizId] = useState<string | null>(null);
-  const [pendingDeleteQuiz, setPendingDeleteQuiz] = useState<string | null>(null);
-  const [pendingDeleteLesson, setPendingDeleteLesson] = useState<string | null>(null);
+  const [pendingDeleteQuiz, setPendingDeleteQuiz] = useState<string | null>(
+    null,
+  );
+  const [pendingDeleteLesson, setPendingDeleteLesson] = useState<string | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,7 +101,7 @@ function CourseContent() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [courseRes, quizRes, enrollmentRes, lessonsRes] =
+        const [courseRes, quizRes, enrollmentRes, lessonsRes, gradeRes] =
           await Promise.all([
             supabase
               .from("courses")
@@ -100,7 +112,7 @@ function CourseContent() {
               .single(),
             supabase
               .from("quizzes")
-              .select(`id, title, status, "dueDate", published`)
+              .select(`id, title, timeLimit, "dueDate", published`)
               .eq("courseId", uuid),
             supabase
               .from("enrollments")
@@ -113,12 +125,18 @@ function CourseContent() {
               )
               .eq("courseId", uuid)
               .order('"uploadedAt"', { ascending: false }),
+            supabase
+              .from("grades")
+              .select(`score, "studentId", "quizId", "courseId"`)
+              .eq("courseId", uuid)
+              .eq("studentId", user?.id),
           ]);
 
         if (courseRes.error) throw courseRes.error;
         if (quizRes.error) throw quizRes.error;
         if (enrollmentRes.error) throw enrollmentRes.error;
         if (lessonsRes.error) throw lessonsRes.error;
+        if (gradeRes.error) throw gradeRes.error;
 
         const raw = courseRes.data as any;
         setCourse(
@@ -139,7 +157,7 @@ function CourseContent() {
             id: q.id,
             title: q.title,
             dueDate: q.dueDate ?? "",
-            status: q.status === "Open" ? "Open" : "Locked",
+            timeLimit: q.timeLimit ?? 10000,
             published: q.published ?? false,
           })),
         );
@@ -160,6 +178,15 @@ function CourseContent() {
             published: l.published ?? false,
           })),
         );
+
+        setGrades(
+          (gradeRes.data ?? []).map((g: any) => ({
+            studentId: g.studentId,
+            quizId: g.quizId,
+            courseId: g.courseId,
+            score: g.score,
+          })),
+        );
       } catch (err) {
         console.error("Fetch failed:", err);
       } finally {
@@ -168,7 +195,7 @@ function CourseContent() {
     };
 
     fetchData();
-  }, [uuid, supabase]);
+  }, [uuid, supabase, user?.id]);
 
   const handleLessonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -451,18 +478,18 @@ function CourseContent() {
               </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {students.map((student) => (
+                {students.map((s) => (
                   <div
-                    key={student.id}
+                    key={s.id}
                     className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-sm font-medium"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold uppercase text-white">
-                      {student.fullName
+                      {s.fullName
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </div>
-                    {student.fullName}
+                    {s.fullName}
                   </div>
                 ))}
               </div>
@@ -512,14 +539,14 @@ function CourseContent() {
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {visibleLessons.map((lesson) => (
+              {visibleLessons.map((l) => (
                 <div
-                  key={lesson.id}
+                  key={l.id}
                   className="group rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:border-zinc-400 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <a
-                      href={lesson.fileUrl}
+                      href={l.fileUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="flex min-w-0 flex-1 items-center gap-4"
@@ -530,11 +557,11 @@ function CourseContent() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="truncate text-lg font-bold group-hover:text-black">
-                            {lesson.title}
+                            {l.title}
                           </h3>
                         </div>
                         <p className="truncate text-xs text-zinc-500">
-                          {lesson.fileName}
+                          {l.fileName}
                         </p>
                       </div>
                     </a>
@@ -543,18 +570,18 @@ function CourseContent() {
                         <>
                           <button
                             type="button"
-                            onClick={() => handleToggleLessonPublish(lesson)}
-                            className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition ${lesson.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                            onClick={() => handleToggleLessonPublish(l)}
+                            className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition ${l.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
                           >
-                            {lesson.published ? "unlocked" : "locked"}
+                            {l.published ? "unlocked" : "locked"}
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteLesson(lesson)}
-                            disabled={deletingLessonId === lesson.id}
-                            className={`rounded-lg p-2 transition disabled:opacity-50 ${pendingDeleteLesson === lesson.id ? "bg-red-100 text-red-600" : "text-zinc-400 hover:bg-red-50 hover:text-red-600"}`}
+                            onClick={() => handleDeleteLesson(l)}
+                            disabled={deletingLessonId === l.id}
+                            className={`rounded-lg p-2 transition disabled:opacity-50 ${pendingDeleteLesson === l.id ? "bg-red-100 text-red-600" : "text-zinc-400 hover:bg-red-50 hover:text-red-600"}`}
                             title={
-                              pendingDeleteLesson === lesson.id
+                              pendingDeleteLesson === l.id
                                 ? "Click again to confirm"
                                 : "Delete lesson"
                             }
@@ -564,16 +591,12 @@ function CourseContent() {
                         </>
                       )}
                       <a
-                        href={lesson.fileUrl}
+                        href={l.fileUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-zinc-300 transition-colors hover:text-zinc-800"
                       >
-                      {lesson.published && (
-                        <ChevronRight
-                          size={20}
-                        />
-                      )}
+                        {l.published && <ChevronRight size={20} />}
                       </a>
                     </div>
                   </div>
@@ -605,15 +628,14 @@ function CourseContent() {
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {visibleQuizzes.map((quiz) => {
-                const isOpen = quiz.status === "Open";
+              {visibleQuizzes.map((q) => {
                 const card = (
                   <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
                     <div className="flex items-center gap-4">
                       <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${quiz.published ? "bg-zinc-100 text-zinc-800" : "bg-zinc-50 text-zinc-300"}`}
+                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${q.published ? "bg-zinc-100 text-zinc-800" : "bg-zinc-50 text-zinc-300"}`}
                       >
-                        {quiz.published ? (
+                        {q.published ? (
                           <FileQuestion size={20} />
                         ) : (
                           <Lock size={20} />
@@ -622,12 +644,12 @@ function CourseContent() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="truncate text-lg font-bold group-hover:text-black">
-                            {quiz.title}
+                            {q.title}
                           </h3>
                         </div>
-                        {quiz.dueDate && (
+                        {q.dueDate && (
                           <p className="truncate text-xs text-zinc-500">
-                            Due {quiz.dueDate}
+                            Due {q.dueDate}
                           </p>
                         )}
                       </div>
@@ -635,23 +657,23 @@ function CourseContent() {
                     <div className="flex items-center gap-2">
                       {isTeacher && (
                         <>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleToggleQuizPublish(quiz);
-                          }}
-                          className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition ${quiz.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-                        >
-                          {quiz.published ? "unlocked" : "locked"}
-                        </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteQuiz(quiz)}
-                            disabled={deletingQuizId === quiz.id}
-                            className={`rounded-lg p-2 transition disabled:opacity-50 ${pendingDeleteLesson === quiz.id ? "bg-red-100 text-red-600" : "text-zinc-400 hover:bg-red-50 hover:text-red-600"}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleToggleQuizPublish(q);
+                            }}
+                            className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition ${q.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                          >
+                            {q.published ? "unlocked" : "locked"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteQuiz(q)}
+                            disabled={deletingQuizId === q.id}
+                            className={`rounded-lg p-2 transition disabled:opacity-50 ${pendingDeleteLesson === q.id ? "bg-red-100 text-red-600" : "text-zinc-400 hover:bg-red-50 hover:text-red-600"}`}
                             title={
-                              pendingDeleteQuiz === quiz.id
+                              pendingDeleteQuiz === q.id
                                 ? "Click again to confirm"
                                 : "Delete lesson"
                             }
@@ -660,7 +682,14 @@ function CourseContent() {
                           </button>
                         </>
                       )}
-                      {quiz.published && (
+
+                      {grades.find((g) => g.quizId === q.id) && (
+                        <p className="text-xs text-zinc-500">
+                          {grades.find((g) => g.quizId === q.id)?.score}%
+                        </p>
+                      )}
+
+                      {q.published && (
                         <ChevronRight
                           size={20}
                           className="text-zinc-300 transition-colors hover:text-zinc-800"
@@ -670,16 +699,16 @@ function CourseContent() {
                   </div>
                 );
 
-                return quiz.published ? (
+                return q.published ? (
                   <Link
-                    key={quiz.id}
-                    href={`/pages/quiz/${quiz.id}`}
+                    key={q.id}
+                    href={`/pages/quiz/${q.id}`}
                     className="group block"
                   >
                     {card}
                   </Link>
                 ) : (
-                  <div key={quiz.id} className="block">
+                  <div key={q.id} className="block">
                     {card}
                   </div>
                 );

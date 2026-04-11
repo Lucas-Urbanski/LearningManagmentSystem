@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   "dueDate" DATE,
-  status TEXT CHECK (status IN ('open', 'closed')) DEFAULT 'closed',
+  "timeLimit" INTEGER,
   published BOOLEAN DEFAULT FALSE,
   questions JSONB NOT NULL,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -188,12 +188,24 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
     )
   );
 
+CREATE POLICY "Instructors can create their own quizzes"
+ON public.quizzes
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() 
+    AND role = 'instructor'
+  )
+);
+
 -- GRADES TABLE
 CREATE TABLE IF NOT EXISTS public.grades (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "studentId" UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   "quizId" UUID REFERENCES public.quizzes(id) ON DELETE CASCADE,
-  "score" INTEGER NOT NULL,
+  "courseId" UUID REFERENCES public.courses(id) ON DELETE CASCADE,
+  "score" FLOAT NOT NULL,
   "submittedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE ("studentId", "quizId")
 );
@@ -203,6 +215,23 @@ ALTER TABLE public.grades ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES FOR GRADES
 CREATE POLICY "Grades are viewable by everyone"
   ON public.grades FOR SELECT USING (TRUE);
+
+CREATE POLICY "Instructors can insert grades"
+  ON public.grades FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.quizzes q
+      JOIN public.courses c ON c.id = q."courseId"
+      WHERE q.id = grades."quizId"
+      AND c."instructorId" = auth.uid()
+    )
+  );
+
+CREATE POlICY "Students can insert their own grades"
+  ON public.grades FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    auth.uid() = "studentId"
+  );
 
 -- STORAGE POLICIES FOR lesson-files BUCKET
 DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
@@ -274,17 +303,5 @@ WITH CHECK (
     FROM public.courses
     WHERE courses.id = "courseId"
       AND courses."instructorId" = auth.uid()
-  )
-);
-
-CREATE POLICY "Instructors can create their own quizzes"
-ON public.quizzes
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() 
-    AND role = 'instructor'
   )
 );

@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Check, CheckCircle2, Circle } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useAuth } from "../../../context/AuthContext";
 import AuthGuard from "../../../components/AuthGuard";
 
 type QuestionChoice = "A" | "B" | "C" | "D";
@@ -15,7 +16,7 @@ type QuizQuestion = {
   B: string;
   C: string;
   D: string;
-  correctAnswer: QuestionChoice | null;
+  correctAnswer: QuestionChoice;
 };
 
 type Quiz = {
@@ -27,6 +28,7 @@ type Quiz = {
 
 function QuizContent() {
   const params = useParams<{ uuid: string | string[] }>();
+  const { user } = useAuth();
   const router = useRouter();
   const uuid = Array.isArray(params.uuid) ? params.uuid[0] : params.uuid;
 
@@ -84,6 +86,35 @@ function QuizContent() {
     if (!uuid || Object.keys(answers).length === 0) return;
     localStorage.setItem(`quiz-answers-${uuid}`, JSON.stringify(answers));
   }, [answers, uuid]);
+
+  let grade = 0;
+  const calculateGrade = () => {
+    let numberOfCorrectAnswers = 0;
+    quiz?.questions?.forEach((q) => {
+      if (answers[q.id] === q.correctAnswer) {
+        numberOfCorrectAnswers++;
+      }
+    });
+    if (quiz?.questions?.length === null) return;
+    grade = (numberOfCorrectAnswers / (quiz?.questions?.length ?? 0)) * 100;
+    grade = Math.round(grade * 100) / 100;
+  };
+
+  const handleGrading = async () => {
+    calculateGrade();
+    try {
+      const { error } = await supabase.from("grades").insert({
+        studentId: user?.id,
+        quizId: quiz?.id,
+        courseId: quiz?.courseId,
+        score: grade,
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      alert(error.message ?? "Error creating grade");
+      console.error("Error creating grade:", error);
+    }
+  };
 
   const handleSelect = (qId: number, letter: string) => {
     setAnswers((prev) => ({ ...prev, [qId]: letter }));
@@ -222,6 +253,8 @@ function QuizContent() {
             <button
               type="button"
               onClick={() => {
+                if (Object.keys(answers).length !== questions.length) return;
+                handleGrading();
                 localStorage.removeItem(`quiz-answers-${uuid}`);
                 router.push(`/pages/course/${quiz.courseId}`);
               }}
@@ -235,6 +268,11 @@ function QuizContent() {
               Submit Quiz
               <CheckCircle2 size={20} />
             </button>
+            {quiz?.questions?.length === null && (
+              <p className="text-red-500">
+                Quiz not found, go back to the course page and reenter the quiz.
+              </p>
+            )}
           </div>
         </div>
       </div>

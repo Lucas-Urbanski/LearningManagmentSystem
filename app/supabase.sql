@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS public.courses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
+  category TEXT,
   "instructorId" UUID REFERENCES public.profiles(id),
   "startDate" DATE,
   "endDate" DATE,
@@ -145,17 +146,16 @@ USING (
   )
 );
 
-CREATE POLICY "Instructors can create their own lesson uploads"
+CREATE POLICY "Instructors can insert lessons for their own courses"
 ON public.lessons
 FOR INSERT
 TO authenticated
 WITH CHECK (
   auth.uid() = "uploadedBy"
   AND EXISTS (
-    SELECT 1
-    FROM public.profiles
-    WHERE id = auth.uid()
-      AND role = 'instructor'
+    SELECT 1 FROM public.courses
+    WHERE courses.id = "courseId"
+      AND courses."instructorId" = auth.uid()
   )
 );
 
@@ -186,6 +186,22 @@ CREATE POLICY "Instructors can manage quizzes for their courses"
     )
   );
 
+-- GRADES TABLE
+CREATE TABLE IF NOT EXISTS public.grades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "studentId" UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  "quizId" UUID REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  "score" INTEGER NOT NULL,
+  "submittedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE ("studentId", "quizId")
+);
+
+ALTER TABLE public.grades ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR GRADES
+CREATE POLICY "Grades are viewable by everyone"
+  ON public.grades FOR SELECT USING (TRUE);
+
 -- STORAGE POLICIES FOR lesson-files BUCKET
 DROP POLICY IF EXISTS "Authenticated users can upload lesson files" ON storage.objects;
 DROP POLICY IF EXISTS "Lesson files are viewable by everyone" ON storage.objects;
@@ -213,11 +229,11 @@ FOR UPDATE
 TO authenticated
 USING (
   bucket_id = 'lesson-files'
-  AND owner_id = auth.uid()
+  AND owner_id = auth.uid()::TEXT
 )
 WITH CHECK (
   bucket_id = 'lesson-files'
-  AND owner_id = auth.uid()
+  AND owner_id = auth.uid()::TEXT
 );
 
 CREATE POLICY "Users can delete their own lesson files"
@@ -226,7 +242,7 @@ FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'lesson-files'
-  AND owner_id = auth.uid()
+  AND owner_id = auth.uid()::TEXT
 );
 
 CREATE POLICY "Authenticated instructors can insert lessons"

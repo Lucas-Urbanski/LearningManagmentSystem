@@ -12,6 +12,7 @@ type Course = {
   id: string;
   title: string;
   description: string;
+  category: string;
   instructor: string;
   startDate: string;
   endDate?: string;
@@ -85,7 +86,7 @@ function HomeContent() {
         const { data, error } = await supabase
           .from("courses")
           .select(
-            `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`,
+            `id, title, description, category, "startDate", "endDate", profiles:instructorId ("fullName")`,
           )
           .order('"createdAt"', { ascending: false });
 
@@ -96,6 +97,7 @@ function HomeContent() {
             id: course.id,
             title: course.title,
             description: course.description ?? "",
+            category: course.category ?? "",
             instructor: course.profiles?.fullName ?? "Unknown",
             startDate: course.startDate ?? "",
             endDate: course.endDate ?? "",
@@ -112,8 +114,9 @@ function HomeContent() {
     fetchCourses();
   }, [supabase]);
 
-  const filteredCourses = courses.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase()),
+  const filteredCourses = courses.filter((c: Course) =>
+    c.title.toLowerCase().includes(search.toLowerCase()) ||
+    c.category.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -147,8 +150,8 @@ function HomeContent() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="text-right border-r border-zinc-200 pr-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+            <div className="hidden text-right border-r border-zinc-200 pr-4 sm:block">
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 ">
                 Signed in as
               </p>
               <p className="text-sm font-semibold text-zinc-800">

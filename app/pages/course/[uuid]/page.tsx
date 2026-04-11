@@ -408,7 +408,7 @@ function CourseContent() {
         </div>
 
         {/* Lessons */}
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           <div className="flex items-center justify-between px-2">
             <h2 className="flex items-center gap-2 text-2xl font-bold">
               <FileText size={24} /> Lessons
@@ -495,7 +495,7 @@ function CourseContent() {
         </div>
 
         {/* Quizzes */}
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           <div className="flex items-center justify-between px-2">
             <h2 className="flex items-center gap-2 text-2xl font-bold">
               <FileQuestion size={24} /> Quizzes

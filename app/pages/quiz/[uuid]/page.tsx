@@ -66,12 +66,33 @@ function QuizContent() {
     if (uuid) fetchData();
   }, [uuid, supabase]);
 
+  // Load saved answers when quiz data arrives
+  useEffect(() => {
+    if (!uuid) return;
+    const saved = localStorage.getItem(`quiz-answers-${uuid}`);
+    if (saved) {
+      try {
+        setAnswers(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem(`quiz-answers-${uuid}`);
+      }
+    }
+  }, [uuid]);
+
+  // Save answers to local storage
+  useEffect(() => {
+    if (!uuid || Object.keys(answers).length === 0) return;
+    localStorage.setItem(`quiz-answers-${uuid}`, JSON.stringify(answers));
+  }, [answers, uuid]);
+
   const handleSelect = (qId: number, letter: string) => {
     setAnswers((prev) => ({ ...prev, [qId]: letter }));
   };
 
   const scrollToQuestion = (id: number) => {
-    document.getElementById(`question-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document
+      .getElementById(`question-${id}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   if (loading) {
@@ -134,7 +155,9 @@ function QuizContent() {
               id={`question-${q.id}`}
               key={q.id}
               className={`rounded-[2.5rem] border bg-white p-8 shadow-sm transition-all duration-500 md:p-12 ${
-                answers[q.id] ? "border-zinc-300 opacity-100" : "border-zinc-200 opacity-90"
+                answers[q.id]
+                  ? "border-zinc-300 opacity-100"
+                  : "border-zinc-200 opacity-90"
               }`}
             >
               <div className="mb-6 flex items-center justify-between">
@@ -180,7 +203,9 @@ function QuizContent() {
                       >
                         {letter}
                       </span>
-                      <span className={`font-medium pt-1 leading-relaxed ${isSelected ? "text-zinc-100" : "text-zinc-700"}`}>
+                      <span
+                        className={`font-medium pt-1 leading-relaxed ${isSelected ? "text-zinc-100" : "text-zinc-700"}`}
+                      >
                         {q[letter]}
                       </span>
                     </button>
@@ -196,7 +221,10 @@ function QuizContent() {
             </p>
             <button
               type="button"
-              onClick={() => router.push(`/pages/course/${quiz.courseId}`)}
+              onClick={() => {
+                localStorage.removeItem(`quiz-answers-${uuid}`);
+                router.push(`/course/${quiz.courseId}`);
+              }}
               disabled={Object.keys(answers).length !== questions.length}
               className={`group flex items-center gap-3 rounded-2xl px-12 py-5 font-bold transition-all shadow-xl ${
                 Object.keys(answers).length === questions.length

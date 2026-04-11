@@ -9,6 +9,7 @@ type Course = {
   id: string;
   title: string;
   description: string;
+  category: string;
   instructor: string;
   startDate: string;
 };
@@ -19,7 +20,11 @@ interface CourseCardProps {
   onDelete?: (courseId: string) => Promise<void>;
 }
 
-export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardProps) {
+export default function CourseCard({
+  courses,
+  onEnroll,
+  onDelete,
+}: CourseCardProps) {
   const { user } = useAuth();
   const isTeacher = user?.role === "instructor";
 
@@ -51,11 +56,15 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
         const isConfirming = pendingDelete === course.id;
 
         return (
-          <Link key={course.id} href={`/pages/course/${course.id}`} className="group block">
+          <Link
+            key={course.id}
+            href={`/pages/course/${course.id}`}
+            className="group block"
+          >
             <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-zinc-300 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
               <div>
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="rounded-lg bg-[#F5F1E6] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border border-zinc-200">
+                  <span className="rounded-lg bg-zinc-900 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white border border-zinc-200">
                     {course.id.slice(0, 8)}
                   </span>
 
@@ -64,7 +73,7 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
                       {isConfirming && (
                         <button
                           onClick={handleCancelDelete}
-                          className="flex items-center gap-2 rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-tight text-white transition-all active:scale-95 bg-zinc-900 hover:bg-zinc-700"
+                          className="flex items-center gap-2 rounded-xl px-7 py-2 text-[11px] font-bold uppercase tracking-tight text-white transition-all active:scale-95 active:scale-95 bg-zinc-900 hover:bg-zinc-700"
                         >
                           Cancel
                         </button>
@@ -78,9 +87,13 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
                         }`}
                       >
                         {isConfirming ? (
-                          <><Check size={14} /> Confirm</>
+                          <>
+                            <Check size={14} /> Confirm
+                          </>
                         ) : (
-                          <><XIcon size={14} /> Remove</>
+                          <>
+                            <XIcon size={14} /> Remove
+                          </>
                         )}
                       </button>
                     </div>
@@ -95,10 +108,16 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
                   )}
                 </div>
 
-                <h2 className="text-2xl font-bold leading-tight text-zinc-800 transition-colors group-hover:text-black">
-                  {course.title}
-                </h2>
-                <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-zinc-600">
+                <div className="flex justify-between items-center gap-2">
+                  <h2 className="text-2xl font-bold leading-tight text-zinc-800 transition-colors group-hover:text-black">
+                    {course.title}
+                  </h2>
+                  <span className="text-xs text-zinc-500">
+                    {course.category}
+                  </span>
+                </div>
+
+                <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-zinc-500">
                   {course.description}
                 </p>
               </div>
@@ -113,11 +132,14 @@ export default function CourseCard({ courses, onEnroll, onDelete }: CourseCardPr
                     <Calendar size={16} className="text-zinc-400" />
                     <span>
                       Starts{" "}
-                      {new Date(course.startDate).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {new Date(course.startDate).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}
                     </span>
                   </div>
                 </div>

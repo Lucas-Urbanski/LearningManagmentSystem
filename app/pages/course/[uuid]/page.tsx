@@ -26,6 +26,7 @@ type Course = {
   id: string;
   name: string;
   description: string;
+  instructorId: string;
   instructor: string;
   startDate: string;
   endDate: string;
@@ -74,11 +75,12 @@ function CourseContent() {
   );
 
   const { user } = useAuth();
-  const isTeacher = user?.role === "instructor";
+  const [course, setCourse] = useState<Course | null>(null);
+  const isTeacher = course?.instructorId === user?.id;
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const [course, setCourse] = useState<Course | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -106,7 +108,7 @@ function CourseContent() {
             supabase
               .from("courses")
               .select(
-                `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`,
+                `id, title, description, "startDate", "endDate", "instructorId", profiles:instructorId ("fullName")`,
               )
               .eq("id", uuid)
               .single(),
@@ -139,18 +141,16 @@ function CourseContent() {
         if (gradeRes.error) throw gradeRes.error;
 
         const raw = courseRes.data as any;
-        setCourse(
-          raw
-            ? {
-                id: raw.id,
-                name: raw.title,
-                description: raw.description ?? "",
-                instructor: raw.profiles?.fullName ?? "Unknown Instructor",
-                startDate: raw.startDate ?? "",
-                endDate: raw.endDate ?? "",
-              }
-            : null,
-        );
+        setCourse({
+          id: raw.id,
+          name: raw.title,
+          description: raw.description ?? "",
+          // FIX 2: read instructorId from the course row, not the profiles join
+          instructorId: raw.instructorId ?? "",
+          instructor: raw.profiles?.fullName ?? "Unknown Instructor",
+          startDate: raw.startDate ?? "",
+          endDate: raw.endDate ?? "",
+        });
 
         setQuizzes(
           (quizRes.data ?? []).map((q: any) => ({
@@ -333,6 +333,7 @@ function CourseContent() {
       setDeletingQuizId(null);
     }
   };
+
   const handleToggleQuizPublish = async (quiz: Quiz) => {
     setActionError(null);
     try {

@@ -167,6 +167,7 @@ function CourseContent() {
                 id: courseData.id,
                 name: courseData.title,
                 description: courseData.description ?? "",
+                instructorId: courseData.instructorId ?? "",
                 instructor: instructorName,
                 startDate: courseData.startDate ?? "",
                 endDate: courseData.endDate ?? "",
@@ -179,6 +180,7 @@ function CourseContent() {
             id: String(quiz.id ?? `quiz-${index}`),
             title: quiz.title,
             dueDate: quiz.dueDate ?? "",
+            timeLimit: 0,
             published: quiz.published ?? false,
             status: "Open",
           }))

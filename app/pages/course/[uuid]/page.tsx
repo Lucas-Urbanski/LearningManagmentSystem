@@ -140,24 +140,30 @@ function CourseContent() {
         if (lessonsRes.error) throw lessonsRes.error;
         if (gradeRes.error) throw gradeRes.error;
 
-        const raw = courseRes.data as any;
-        setCourse({
-          id: raw.id,
-          name: raw.title,
-          description: raw.description ?? "",
-          instructorId: raw.instructorId ?? "",
-          instructor: raw.profiles?.fullName ?? "Unknown Instructor",
-          startDate: raw.startDate ?? "",
-          endDate: raw.endDate ?? "",
-        });
+        const rawCourse = courseRes.data as any;
+
+        setCourse(
+          rawCourse
+            ? {
+                id: rawCourse.id,
+                name: rawCourse.title,
+                description: rawCourse.description ?? "",
+                instructorId: rawCourse.instructorId ?? "",
+                instructor:
+                  rawCourse.profiles?.fullName ?? "Unknown Instructor",
+                startDate: rawCourse.startDate ?? "",
+                endDate: rawCourse.endDate ?? "",
+              }
+            : null,
+        );
 
         setQuizzes(
-          (quizRes.data ?? []).map((q: any) => ({
-            id: q.id,
-            title: q.title,
-            dueDate: q.dueDate ?? "",
-            timeLimit: q.timeLimit ?? 10000,
-            published: q.published ?? false,
+          (quizRes.data ?? []).map((quiz: any) => ({
+            id: quiz.id,
+            title: quiz.title,
+            dueDate: quiz.dueDate ?? "",
+            timeLimit: quiz.timeLimit ?? 0,
+            published: quiz.published ?? false,
           })),
         );
 
@@ -343,7 +349,7 @@ function CourseContent() {
       if (error) throw error;
       setQuizzes((prev) =>
         prev.map((q) =>
-          q.id === quiz.id ? { ...q, published: !q.published } : q,
+          q.id === quiz.id ? { ...q, published: nextPublished } : q,
         ),
       );
     } catch (err: any) {
@@ -540,64 +546,83 @@ function CourseContent() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {visibleLessons.map((lesson) => (
-                <div
-                  key={lesson.id}
-                  className="group rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:border-zinc-400 hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <a
-                      href={lesson.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex min-w-0 flex-1 items-center gap-4"
-                    >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800">
-                        <FileText size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="truncate text-lg font-bold group-hover:text-black">
-                            {lesson.title}
-                          </h3>
-                        </div>
-                        <p className="truncate text-xs text-zinc-500">
-                          {lesson.fileName}
-                        </p>
-                      </div>
-                    </a>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {isTeacher && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleLessonPublish(lesson)}
-                            className={`rounded-lg px-3 py-1 text-xs font-bold uppercase transition ${lesson.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
-                          >
-                            {lesson.published ? "unlocked" : "locked"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteLesson(lesson)}
-                            disabled={deletingLessonId === lesson.id}
-                            className={`rounded-lg p-2 transition disabled:opacity-50 ${pendingDeleteLesson === lesson.id ? "bg-red-100 text-red-600" : "text-zinc-400 hover:bg-red-50 hover:text-red-600"}`}
-                            title={
-                              pendingDeleteLesson === lesson.id
-                                ? "Click again to confirm"
-                                : "Delete lesson"
-                            }
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
+                <div key={lesson.id} className="group block">
+                  <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
+                    <div className="flex items-start justify-between gap-4">
                       <a
                         href={lesson.fileUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-zinc-300 transition-colors hover:text-zinc-800"
+                        className="flex min-w-0 flex-1 items-center gap-4"
                       >
-                        {lesson.published && <ChevronRight size={20} />}
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800">
+                          <FileText size={20} />
+                        </div>
+                        <div className="min-w-0 max-w-[150px] sm:max-w-full">
+                          <div className="flex items-center gap-2">
+                            <h3 className="truncate text-lg font-bold group-hover:text-black">
+                              {lesson.title}
+                            </h3>
+                            {isTeacher && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                  lesson.published
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-zinc-100 text-zinc-500"
+                                }`}
+                              >
+                                {lesson.published ? "Published" : "Hidden"}
+                              </span>
+                            )}
+                          </div>
+                          <p className="truncate text-xs text-zinc-500">
+                            {lesson.fileName}
+                          </p>
+                        </div>
                       </a>
+
+                      <div className="flex items-center gap-2">
+                        {isTeacher && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleLessonPublish(lesson)}
+                              className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
+                                lesson.published
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                              }`}
+                              title={
+                                lesson.published
+                                  ? "Unpublish lesson"
+                                  : "Publish lesson"
+                              }
+                            >
+                              {lesson.published ? "Unpublish" : "Publish"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLesson(lesson)}
+                              disabled={deletingLessonId === lesson.id}
+                              className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                              title="Delete lesson"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
+
+                        <a
+                          href={lesson.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-zinc-300 transition-colors hover:text-zinc-800"
+                          title="Open in new tab"
+                        >
+                          <ChevronRight size={20} />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -633,9 +658,13 @@ function CourseContent() {
                   <div className="flex items-center justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all group-hover:border-zinc-400 group-hover:shadow-md">
                     <div className="flex items-center gap-4">
                       <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${quiz.published ? "bg-zinc-100 text-zinc-800" : "bg-zinc-50 text-zinc-300"}`}
+                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                          isOpen
+                            ? "bg-zinc-100 text-zinc-800"
+                            : "bg-zinc-50 text-zinc-300"
+                        }`}
                       >
-                        {quiz.published ? (
+                        {isOpen ? (
                           <FileQuestion size={20} />
                         ) : (
                           <Lock size={20} />
@@ -700,13 +729,21 @@ function CourseContent() {
                 );
 
                 return quiz.published ? (
-                  <Link
-                    key={quiz.id}
-                    href={`/pages/quiz/${quiz.id}`}
-                    className="group block"
-                  >
-                    {card}
-                  </Link>
+                  <div>
+                    {isTeacher ? (
+                      <div key={quiz.id} className="block">
+                        {card}
+                      </div>
+                    ) : (
+                      <Link
+                        key={quiz.id}
+                        href={`/pages/quiz/${quiz.id}`}
+                        className="group block"
+                      >
+                        {card}
+                      </Link>
+                    )}
+                  </div>
                 ) : (
                   <div key={quiz.id} className="block">
                     {card}

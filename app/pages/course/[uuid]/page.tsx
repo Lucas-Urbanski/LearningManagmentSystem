@@ -645,7 +645,6 @@ function CourseContent() {
                 </div>
               );
 
-              // unless you want them to preview it. Adjusted logic for safety.
               return quiz.published || isTeacher ? (
                 <Link key={quiz.id} href={`/pages/quiz/${quiz.id}`} className="group block">
                   {card}

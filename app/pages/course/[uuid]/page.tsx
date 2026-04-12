@@ -431,9 +431,6 @@ function CourseContent() {
 
       <main className="mx-auto space-y-8 px-6 py-12">
         <section className="rounded-3xl bg-zinc-900 p-10 text-white shadow-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-[10px] font-bold uppercase tracking-widest">
-            <GraduationCap size={14} /> Active Course
-          </div>
           <h1 className="text-2xl font-black sm:text-3xl md:text-4xl lg:text-5xl">
             {course.name}
           </h1>

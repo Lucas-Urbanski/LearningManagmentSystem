@@ -703,7 +703,7 @@ function CourseContent() {
                 return q.published ? (
                   <div key={q.id}>
                   {isTeacher ? (
-                  <div key={q.id} className="block">
+                  <div className="block">
                     {card}
                   </div>)
                   : (<Link

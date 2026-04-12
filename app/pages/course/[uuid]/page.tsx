@@ -678,6 +678,15 @@ function CourseContent() {
                   </div>
                 );
 
+                return quiz.published ? (
+                  <div>
+                  {isTeacher ? (
+                  <div key={quiz.id} className="block">
+                    {card}
+                  </div>)
+                  : (<Link
+                    key={quiz.id}
+                    href={`/pages/quiz/${quiz.id}`}
                 return isOpen ? (
                   <Link
                     key={quiz.id}
@@ -685,7 +694,8 @@ function CourseContent() {
                     className="group block"
                   >
                     {card}
-                  </Link>
+                  </Link>)}
+                  </div>
                 ) : (
                   <div key={quiz.id} className="block">
                     {card}

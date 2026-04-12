@@ -76,80 +76,102 @@ function CourseContent() {
     localStorage.setItem("courseid", course?.id ?? "null");
   }, [course?.id]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (!uuid) return;
 
     const fetchData = async () => {
       setLoading(true);
 
       try {
-        const [courseRes, quizRes, enrollmentRes, lessonsRes] =
-          await Promise.all([
-            supabase
-              .from("courses")
-              .select(
-                `id, title, description, "startDate", "endDate", profiles:instructorId ("fullName")`
-              )
-              .eq("id", uuid)
-              .single(),
+        const { data: courseData, error: courseError } = await supabase
+          .from("courses")
+          .select(`id, title, description, "startDate", "endDate", "instructorId"`)
+          .eq("id", uuid)
+          .single();
 
-            supabase
-              .from("quizzes")
-              .select(`id, title, status, "dueDate", published`)
-              .eq("courseId", uuid),
+        if (courseError) {
+          console.error("COURSE ERROR:", courseError);
+          throw courseError;
+        }
 
-            supabase
-              .from("enrollments")
-              .select(`student:studentId (id, "fullName")`)
-              .eq("courseId", uuid),
+        let instructorName = "Unknown Instructor";
 
-            supabase
-              .from("lessons")
-              .select(
-                `id, title, "fileName", "fileUrl", "filePath", "uploadedAt", published`
-              )
-              .eq("courseId", uuid)
-              .order("uploadedAt", { ascending: false }),
-          ]);
+        if (courseData?.instructorId) {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select(`"fullName"`)
+            .eq("id", courseData.instructorId)
+            .single();
 
-        if (courseRes.error) throw courseRes.error;
-        if (quizRes.error) throw quizRes.error;
-        if (enrollmentRes.error) throw enrollmentRes.error;
-        if (lessonsRes.error) throw lessonsRes.error;
+          if (profileError) {
+            console.error("PROFILE ERROR:", profileError);
+          } else {
+            instructorName = profileData?.fullName ?? "Unknown Instructor";
+          }
+        }
 
-        const rawCourse = courseRes.data as any;
+        const { data: quizData, error: quizError } = await supabase
+          .from("quizzes")
+          .select(`id, title, "dueDate", published`)
+          .eq("courseId", uuid);
+
+        if (quizError) {
+          console.error("QUIZ ERROR:", quizError);
+          throw quizError;
+        }
+
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from("enrollments")
+          .select(`student:studentId (id, "fullName")`)
+          .eq("courseId", uuid);
+
+        if (enrollmentError) {
+          console.error("ENROLLMENT ERROR:", enrollmentError);
+          throw enrollmentError;
+        }
+
+        const { data: lessonData, error: lessonError } = await supabase
+          .from("lessons")
+          .select(`id, title, "fileName", "fileUrl", "filePath", "uploadedAt", published`)
+          .eq("courseId", uuid)
+          .order("uploadedAt", { ascending: false });
+
+        if (lessonError) {
+          console.error("LESSON ERROR:", lessonError);
+          throw lessonError;
+        }
 
         setCourse(
-          rawCourse
+          courseData
             ? {
-                id: rawCourse.id,
-                name: rawCourse.title,
-                description: rawCourse.description ?? "",
-                instructor: rawCourse.profiles?.fullName ?? "Unknown Instructor",
-                startDate: rawCourse.startDate ?? "",
-                endDate: rawCourse.endDate ?? "",
+                id: courseData.id,
+                name: courseData.title,
+                description: courseData.description ?? "",
+                instructor: instructorName,
+                startDate: courseData.startDate ?? "",
+                endDate: courseData.endDate ?? "",
               }
             : null
         );
 
         setQuizzes(
-          (quizRes.data ?? []).map((quiz: any) => ({
+          (quizData ?? []).map((quiz: any) => ({
             id: quiz.id,
             title: quiz.title,
             dueDate: quiz.dueDate ?? "",
-            status: quiz.status === "open" ? "Open" : "Locked",
             published: quiz.published ?? false,
+            status: "Open",
           }))
         );
 
         setStudents(
-          (enrollmentRes.data ?? [])
+          (enrollmentData ?? [])
             .map((e: any) => e.student as Student | null)
             .filter((s): s is Student => s !== null)
         );
 
         setLessons(
-          (lessonsRes.data ?? []).map((lesson: any) => ({
+          (lessonData ?? []).map((lesson: any) => ({
             id: lesson.id,
             title: lesson.title,
             fileName: lesson.fileName,

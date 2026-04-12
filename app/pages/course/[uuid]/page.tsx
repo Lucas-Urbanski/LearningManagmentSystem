@@ -709,10 +709,6 @@ function CourseContent() {
                   : (<Link
                     key={quiz.id}
                     href={`/pages/quiz/${quiz.id}`}
-                return isOpen ? (
-                  <Link
-                    key={quiz.id}
-                    href={`/pages/quiz/${quiz.id}`}
                     className="group block"
                   >
                     {card}
@@ -722,6 +718,7 @@ function CourseContent() {
                   <div key={quiz.id} className="block">
                     {card}
                   </div>
+ 
                 );
               })}
             </div>

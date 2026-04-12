@@ -701,13 +701,19 @@ function CourseContent() {
                 );
 
                 return q.published ? (
-                  <Link
+                  <div>
+                  {isTeacher ? (
+                  <div key={q.id} className="block">
+                    {card}
+                  </div>)
+                  : (<Link
                     key={q.id}
                     href={`/pages/quiz/${q.id}`}
                     className="group block"
                   >
                     {card}
-                  </Link>
+                  </Link>)}
+                  </div>
                 ) : (
                   <div key={q.id} className="block">
                     {card}

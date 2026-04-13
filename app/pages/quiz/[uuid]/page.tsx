@@ -163,7 +163,7 @@ function QuizContent() {
 
     // Calculate percentage and round to 2 decimal places
     grade = (numberOfCorrectAnswers / (quiz?.questions?.length ?? 1)) * 100;
-    grade = Math.round(grade * 100) / 100;
+    grade = Math.round(grade);
   };
 
   // Submission handler: records grade and marks attempt as finished
